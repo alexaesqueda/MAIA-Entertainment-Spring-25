@@ -30,3 +30,34 @@ def routes():
     return [r.path for r in app.routes]
 
 print("DB URL repr:", repr(os.getenv("DATABASE_URL")))
+
+
+from sqlalchemy.engine.url import make_url
+
+@app.get("/db-debug")
+def db_debug():
+    import os, socket
+    raw = os.getenv("DATABASE_URL")
+    try:
+        u = make_url(raw)
+        host = u.host
+        # try DNS resolution to surface the exact error here
+        try:
+            socket.getaddrinfo(host, u.port or 5432)
+            dns_ok = True
+            dns_err = None
+        except Exception as e:
+            dns_ok = False
+            dns_err = str(e)
+        return {
+            "env_loaded": bool(raw),
+            "driver": u.drivername,
+            "host": host,
+            "port": u.port,
+            "database": u.database,
+            "query": u.query,
+            "dns_ok": dns_ok,
+            "dns_err": dns_err,
+        }
+    except Exception as e:
+        return {"env_loaded": bool(raw), "parse_error": str(e), "raw": raw}
