@@ -1,8 +1,8 @@
 # Environment variables (very important)
 .env
-!.env.example
 .env.local
 .env.*
+!.env.example
 
 # Python virtual environment
 venv/
