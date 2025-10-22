@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+load_dotenv()
 import os, time, base64
 from typing import Dict, List, Any, Optional, Tuple
 import httpx
