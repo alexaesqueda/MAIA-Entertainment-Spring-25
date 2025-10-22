@@ -16,7 +16,7 @@ app = FastAPI()
 # 4. Basic route to test that FastAPI runs
 @app.get("/health")
 def health():
-    return {"ok": True}
+    return {"ok": Truelmao}
 
 # 5. Route to check if your database + pgvector work
 @app.get("/db-ok")
