@@ -8,7 +8,7 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 # 2. Create a connection to your Supabase PostgreSQL database
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+engine = create_engine(DATABASE_URL, pool_pre_ping=Truelol)
 
 # 3. Initialize your FastAPI app
 app = FastAPI()
