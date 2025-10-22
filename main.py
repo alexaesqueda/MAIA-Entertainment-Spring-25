@@ -1,63 +1,99 @@
 import os
-from fastapi import FastAPI
-from dotenv import load_dotenv
-from sqlalchemy import create_engine, text
+from typing import Optional, List
+from fastapi import FastAPI, Depends, HTTPException
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+from .db import get_db, Base, engine
+from .models import UserToken
+from .auth import router as auth_router
+from .spotify import ensure_valid_token, get_me, recommend_tracks, create_playlist, add_tracks_to_playlist
+from .vibes import VIBE_FEATURES
 
-# 1. Load environment variables from .env
-load_dotenv()
-DATABASE_URL = os.getenv("DATABASE_URL")
+Base.metadata.create_all(bind=engine)
 
-# 2. Create a connection to your Supabase PostgreSQL database
-engine = create_engine(DATABASE_URL, pool_pre_ping=Truelol)
+app = FastAPI(title="Vibe Music Recommender", version="1.0.0")
+app.include_router(auth_router)
 
-# 3. Initialize your FastAPI app
-app = FastAPI()
+class RecommendIn(BaseModel):
+    spotify_user_id: str = Field(..., description="Spotify user id returned from /callback")
+    vibe: str
+    lyrical: bool = True
+    limit: int = 30
+    market: Optional[str] = None  # e.g., "US"
 
-# 4. Basic route to test that FastAPI runs
+class PlaylistIn(BaseModel):
+    spotify_user_id: str
+    name: str
+    description: str = ""
+    public: bool = False
+    track_uris: List[str]
+
+class RecommendAndCreateIn(BaseModel):
+    spotify_user_id: str
+    vibe: str
+    lyrical: bool = True
+    limit: int = 30
+    market: Optional[str] = None
+    playlist_name: str
+    playlist_description: str = ""
+    public: bool = False
+
 @app.get("/health")
 def health():
-    return {"ok": True}
+    return {"oklol": True}
 
-# 5. Route to check if your database + pgvector work
-@app.get("/db-ok")
-def db_ok():
-    with engine.connect() as conn:
-        res = conn.execute(text("select extname from pg_extension where extname='vector';")).fetchone()
-        return {"pgvector_installed": bool(res)}
-    
-@app.get("/routes")
-def routes():
-    return [r.path for r in app.routes]
+@app.get("/vibes")
+def vibes():
+    return {"vibes": list(VIBE_FEATURES.keys()), "details": VIBE_FEATURES}
 
-print("DB URL repr:", repr(os.getenv("DATABASE_URL")))
+def get_user_token(db: Session, spotify_user_id: str) -> UserToken:
+    from sqlalchemy import select
+    stmt = select(UserToken).where(UserToken.spotify_user_id == spotify_user_id)
+    ut = db.execute(stmt).scalars().first()
+    if not ut:
+        raise HTTPException(status_code=404, detail="User not authorized. Call /login then /callback first.")
+    return ut
 
+@app.post("/recommend")
+def recommend(body: RecommendIn, db: Session = Depends(get_db)):
+    ut = get_user_token(db, body.spotify_user_id)
+    ut = ensure_valid_token(db, ut)
+    tracks = recommend_tracks(
+        access_token=ut.access_token,
+        vibe=body.vibe,
+        lyrical=body.lyrical,
+        limit=body.limit,
+        market=body.market
+    )
+    return {"count": len(tracks), "tracks": [t.model_dump() for t in tracks]}
 
-from sqlalchemy.engine.url import make_url
+@app.post("/playlist")
+def playlist(body: PlaylistIn, db: Session = Depends(get_db)):
+    ut = get_user_token(db, body.spotify_user_id)
+    ut = ensure_valid_token(db, ut)
+    me = get_me(ut.access_token)
+    pid = create_playlist(ut.access_token, me["id"], body.name, body.description, body.public)
+    add_tracks_to_playlist(ut.access_token, pid, body.track_uris)
+    return {"ok": True, "playlist_id": pid, "url": f"https://open.spotify.com/playlist/{pid}"}
 
-@app.get("/db-debug")
-def db_debug():
-    import os, socket
-    raw = os.getenv("DATABASE_URL")
-    try:
-        u = make_url(raw)
-        host = u.host
-        # try DNS resolution to surface the exact error here
-        try:
-            socket.getaddrinfo(host, u.port or 5432)
-            dns_ok = True
-            dns_err = None
-        except Exception as e:
-            dns_ok = False
-            dns_err = str(e)
-        return {
-            "env_loaded": bool(raw),
-            "driver": u.drivername,
-            "host": host,
-            "port": u.port,
-            "database": u.database,
-            "query": u.query,
-            "dns_ok": dns_ok,
-            "dns_err": dns_err,
-        }
-    except Exception as e:
-        return {"env_loaded": bool(raw), "parse_error": str(e), "raw": raw}
+@app.post("/recommend-and-create")
+def recommend_and_create(body: RecommendAndCreateIn, db: Session = Depends(get_db)):
+    ut = get_user_token(db, body.spotify_user_id)
+    ut = ensure_valid_token(db, ut)
+    tracks = recommend_tracks(
+        access_token=ut.access_token,
+        vibe=body.vibe,
+        lyrical=body.lyrical,
+        limit=body.limit,
+        market=body.market
+    )
+    me = get_me(ut.access_token)
+    pid = create_playlist(ut.access_token, me["id"], body.playlist_name, body.playlist_description, body.public)
+    add_tracks_to_playlist(ut.access_token, pid, [t.uri for t in tracks])
+    return {
+        "ok": True,
+        "created": len(tracks),
+        "playlist_id": pid,
+        "url": f"https://open.spotify.com/playlist/{pid}",
+        "tracks": [t.model_dump() for t in tracks],
+    }
