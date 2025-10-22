@@ -40,7 +40,7 @@ class RecommendAndCreateIn(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"ok": True}
+    return {"oklol": True}
 
 @app.get("/vibes")
 def vibes():
