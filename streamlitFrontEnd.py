@@ -1,5 +1,5 @@
 """
-Streamlit Frontend — Vibe Music Recommender
+Streamlit Frontend — STANZA
 =====================================================
 This Streamlit app is a **clean, production‑ready frontend** for your FastAPI backend.
 It handles Spotify OAuth (via your backend), lets users pick a **vibe** and
