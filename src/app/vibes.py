@@ -50,12 +50,12 @@ VIBE_FEATURES: Dict[str, Dict[str, Any]] = {
 
 # Optional genre nudges (seed genres)
 VIBE_SEED_GENRES = {
-    "mellow": ["chill", "acoustic", "ambient"],
-    "energetic": ["edm", "dance", "house", "rock"],
-    "sad": ["sad", "singer-songwriter", "piano"],
-    "happy": ["pop", "funk", "dance-pop"],
-    "focus": ["lo-fi", "ambient", "classical"],
-    "epic": ["orchestral", "trailerr", "power-metal", "electro"]
+    "mellow": ["acoustic", "ambient", "folk"],
+    "energetic": ["dance", "edm", "house", "rock"],
+    "sad": ["piano", "singer-songwriter", "indie"],
+    "happy": ["pop", "funk", "dance"],
+    "focus": ["ambient", "study", "classical"],
+    "epic": ["rock", "electronic", "trance"]
 }
 
 def instrumental_filter_threshold(lyrical: bool):
