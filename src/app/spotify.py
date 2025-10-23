@@ -27,6 +27,19 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from .models import UserToken
 from .vibes import VIBE_FEATURES, VIBE_SEED_GENRES, instrumental_filter_threshold
+from httpx import HTTPStatusError
+# ---- Safe seed genres + helper ----
+ALLOWED_SEED_GENRES = {
+    # Subset of Spotify's documented seeds; safe broadly
+    "acoustic","alt-rock","alternative","ambient","classical","dance","dancehall","edm",
+    "electronic","folk","funk","groove","hard-rock","hip-hop","house","indie","indie-pop",
+    "jazz","metal","minimal-techno","new-age","piano","pop","power-pop","progressive-house",
+    "punk","r-n-b","rock","singer-songwriter","study","techno","trance"
+}
+
+def _filtered_seed_genres(raw):
+    return [g for g in (raw or []) if g in ALLOWED_SEED_GENRES][:5]
+# -----------------------------------
 
 SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
 SPOTIFY_API = "https://api.spotify.com/v1"
@@ -150,27 +163,41 @@ def recommend_tracks(
     vibe = vibe.lower()
     if vibe not in VIBE_FEATURES:
         raise ValueError(f"Unsupported vibe '{vibe}'. Supported: {list(VIBE_FEATURES.keys())}")
+  # Instrumentalness band based on lyrical toggle (already computed above)
+    lo, hi = instrumental_filter_threshold(lyrical)
+
+    # --- BEGIN hardened recommendations request ---
+    seed_list = _filtered_seed_genres(VIBE_SEED_GENRES.get(vibe, []))
+
     params = {
         "limit": min(max(limit, 1), 100),
-        "seed_genres": ",".join(VIBE_SEED_GENRES.get(vibe, [])[:5]),
         "target_energy": VIBE_FEATURES[vibe]["target_energy"],
         "target_valence": VIBE_FEATURES[vibe]["target_valence"],
         "target_acousticness": VIBE_FEATURES[vibe]["target_acousticness"],
         "min_tempo": VIBE_FEATURES[vibe]["min_tempo"],
         "max_tempo": VIBE_FEATURES[vibe]["max_tempo"],
         "target_danceability": VIBE_FEATURES[vibe]["target_danceability"],
+        "target_instrumentalness": (lo + hi) / 2.0,
     }
-    # Instrumentalness band based on lyrical toggle
-    lo, hi = instrumental_filter_threshold(lyrical)
-    # Use a soft target; we’ll hard-filter/score after we fetch features
-    params["target_instrumentalness"] = (lo + hi) / 2.0
     if market:
         params["market"] = market
+    if seed_list:
+        params["seed_genres"] = ",".join(seed_list)
 
     with httpx.Client(timeout=20.0) as client:
-        r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=auth_header(access_token))
-        r.raise_for_status()
+        try:
+            r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=auth_header(access_token))
+            r.raise_for_status()
+        except HTTPStatusError as e:
+            # If Spotify rejects seeds (400), retry without seed_genres
+            if e.response is not None and e.response.status_code == 400 and "seed" in e.response.text.lower():
+                params.pop("seed_genres", None)
+                r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=auth_header(access_token))
+                r.raise_for_status()
+            else:
+                raise
         items = r.json().get("tracks", [])
+    # --- END hardened recommendations request ---
 
     # Pull audio features and compute a vibe score to sort
     track_ids = [t["id"] for t in items if t.get("id")]
