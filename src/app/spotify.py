@@ -1,3 +1,17 @@
+# --- MUST be at the very top ---
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+ENV_PATH = Path(__file__).resolve().parents[2] / ".env"  # <project>/.env
+load_dotenv(ENV_PATH, override=True)
+
+# Now read env vars AFTER loading .env
+CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
+REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
+APP_SECRET_KEY = os.getenv("APP_SECRET_KEY", "dev-secret")
+BASE_URL = os.getenv("APP_BASE_URL", "http://127.0.0.1:8000")
 from pathlib import Path
 from dotenv import load_dotenv
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
