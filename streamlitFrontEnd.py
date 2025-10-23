@@ -1,10 +1,6 @@
 """
 Streamlit Frontend — STANZA
 =====================================================
-This Streamlit app is a **clean, production‑ready frontend** for your FastAPI backend.
-It handles Spotify OAuth (via your backend), lets users pick a **vibe** and
-**lyrical vs. non‑lyrical** preference, previews recommendations, and creates playlists.
-
 --------------------------------------
 **CRITICAL ENV SETUP (do this once):**
 --------------------------------------
@@ -27,14 +23,7 @@ Run locally:
 --------------------------------------
 $ pip install streamlit requests python-dotenv
 $ streamlit run streamlit_frontend_app.py
-
 --------------------------------------
-Notes:
---------------------------------------
-- This app assumes your backend endpoints exactly match the code you provided.
-- If your backend runs on a different origin, be sure CORS is enabled there.
-- The backend `recommend` response includes `preview_url` and `external_url`; album images
-  are not returned, so we present clean text previews and optional audio samples.
 """
 
 import os
