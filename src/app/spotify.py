@@ -1,3 +1,7 @@
+from pathlib import Path
+from dotenv import load_dotenv
+ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
+load_dotenv(ENV_PATH)
 from dotenv import load_dotenv
 load_dotenv()
 import os, time, base64
