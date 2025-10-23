@@ -182,17 +182,16 @@ def recommend_tracks(
     limit: int = 30,
     market: Optional[str] = None
 ) -> List[TrackOut]:
+    # ---- VALIDATE VIBE ----
     vibe = vibe.lower()
     if vibe not in VIBE_FEATURES:
         raise ValueError(f"Unsupported vibe '{vibe}'. Supported: {list(VIBE_FEATURES.keys())}")
-    # Instrumentalness band based on lyrical toggle
+
+    # ---- INSTRUMENTALNESS TARGET FROM TOGGLE ----
     lo, hi = instrumental_filter_threshold(lyrical)
 
-    # --- BEGIN hardened recommendations request ---
-    # 1) Intersect our vibe seeds with Spotify's live allowed seeds
-    allowed = _cached_allowed_seeds(access_token)
-    seed_list = [g for g in VIBE_SEED_GENRES.get(vibe, []) if g in allowed][:5]
-
+    # ---- BUILD PARAMS (NO seed_genres) ----
+    # Using only audio-feature targets avoids seed issues that cause 404/400
     params = {
         "limit": min(max(limit, 1), 100),
         "target_energy": VIBE_FEATURES[vibe]["target_energy"],
@@ -205,35 +204,19 @@ def recommend_tracks(
     }
     if market:
         params["market"] = market
-    if seed_list:
-        params["seed_genres"] = ",".join(seed_list)
 
-    def _call(params_dict):
-        with httpx.Client(timeout=20.0) as client:
-            r = client.get(f"{SPOTIFY_API}/recommendations", params=params_dict, headers=auth_header(access_token))
+    # ---- CALL SPOTIFY RECOMMENDATIONS ----
+    with httpx.Client(timeout=20.0) as client:
+        r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=auth_header(access_token))
+        try:
             r.raise_for_status()
-            return r
-
-    try:
-        r = _call(params)
-    except HTTPStatusError as e:
-        # Log for terminal visibility
-        text = e.response.text if e.response is not None else ""
-        print("Recommendations error:", e.response.status_code if e.response else "?", text)
-
-        # Retry once **without** seed_genres on any 4xx except 401
-        code = e.response.status_code if e.response is not None else 0
-        if code in (400, 403, 404, 409, 422):
-            params.pop("seed_genres", None)
-            r = _call(params)
-        else:
+        except httpx.HTTPStatusError as e:
+            # Print for visibility, then bubble up
+            print("Recommendations failed:", e.response.status_code if e.response else "?", e.response.text if e.response else "")
             raise
+        items = r.json().get("tracks", [])
 
-    items = r.json().get("tracks", [])
-    # --- END hardened recommendations request ---
-    # --- END hardened recommendations request ---
-
-    # Pull audio features and compute a vibe score to sort
+    # ---- FETCH AUDIO FEATURES FOR SCORING ----
     track_ids = [t["id"] for t in items if t.get("id")]
     features_map = get_audio_features(access_token, track_ids)
 
@@ -241,7 +224,6 @@ def recommend_tracks(
         if not feat:
             return 0.0
         vf = VIBE_FEATURES[vibe]
-        # Weighted L2 distance as negative score (lower distance = higher score)
         weights = {
             "energy": 2.0,
             "valence": 1.8,
@@ -255,10 +237,7 @@ def recommend_tracks(
         dist += weights["valence"] * (feat.get("valence", 0) - vf["target_valence"]) ** 2
         dist += weights["acousticness"] * (feat.get("acousticness", 0) - vf["target_acousticness"]) ** 2
         dist += weights["danceability"] * (feat.get("danceability", 0) - vf["target_danceability"]) ** 2
-        dist += weights["instrumentalness"] * (
-            feat.get("instrumentalness", 0) - ((lo + hi) / 2.0)
-        ) ** 2
-        # Tempo penalty if outside band
+        dist += weights["instrumentalness"] * (feat.get("instrumentalness", 0) - ((lo + hi) / 2.0)) ** 2
         tempo = feat.get("tempo", 120)
         if tempo < vf["min_tempo"]:
             dist += weights["tempo"] * ((vf["min_tempo"] - tempo) / 100.0) ** 2
@@ -266,7 +245,7 @@ def recommend_tracks(
             dist += weights["tempo"] * ((tempo - vf["max_tempo"]) / 100.0) ** 2
         return -dist
 
-    # Build results & apply a **hard** lyrical vs non-lyrical filter band for precision
+    # ---- HARD FILTER FOR LYRICAL vs NON-LYRICAL ----
     results: List[TrackOut] = []
     for t in items:
         fid = t["id"]
@@ -290,9 +269,7 @@ def recommend_tracks(
             )
         )
 
-    # Sort by vibe score descending
     results.sort(key=lambda x: score(x.features), reverse=True)
-    # Return top-N (limit already used at fetch time; after filter we cap again)
     return results[:limit]
 
 def create_playlist(access_token: str, user_id: str, name: str, description: str, public: bool) -> str:
