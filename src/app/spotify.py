@@ -1,4 +1,4 @@
-# src/app/spotify.py  — clean version
+# src/app/spotify.py  — guaranteed seed-free, with debug prints
 
 import os, time, base64
 from pathlib import Path
@@ -25,7 +25,6 @@ CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
 APP_SECRET_KEY = os.getenv("APP_SECRET_KEY", "dev-secret")
-# Base URL should be the server root, not /callback
 BASE_URL = os.getenv("APP_BASE_URL", "http://127.0.0.1:8000")
 
 SERIALIZER = URLSafeSerializer(APP_SECRET_KEY, salt="state-salt")
@@ -38,6 +37,8 @@ SCOPES = [
 ]
 SCOPE_STR = " ".join(SCOPES)
 
+# prove which spotify.py is loaded
+print(">>> USING spotify.py FROM:", __file__)
 
 class TrackOut(BaseModel):
     id: str
@@ -68,7 +69,6 @@ def parse_state(state: str) -> Dict[str, Any]:
 
 def auth_url() -> str:
     import urllib.parse as up
-
     params = {
         "client_id": CLIENT_ID,
         "response_type": "code",
@@ -83,11 +83,7 @@ def auth_url() -> str:
 @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
 def exchange_code_for_tokens(code: str) -> Dict[str, Any]:
     headers = {"Authorization": "Basic " + encode_basic_auth(CLIENT_ID, CLIENT_SECRET)}
-    data = {
-        "grant_type": "authorization_code",
-        "code": code,
-        "redirect_uri": REDIRECT_URI,
-    }
+    data = {"grant_type": "authorization_code", "code": code, "redirect_uri": REDIRECT_URI}
     with httpx.Client(timeout=15.0) as client:
         r = client.post(SPOTIFY_TOKEN_URL, data=data, headers=headers)
         r.raise_for_status()
@@ -145,16 +141,14 @@ def recommend_tracks(
     limit: int = 30,
     market: Optional[str] = None,
 ) -> List[TrackOut]:
-    # Validate vibe
     vibe = vibe.lower()
     if vibe not in VIBE_FEATURES:
         raise ValueError(f"Unsupported vibe '{vibe}'. Supported: {list(VIBE_FEATURES.keys())}")
 
-    # Instrumentalness target from toggle
     lo, hi = instrumental_filter_threshold(lyrical)
 
-    # Build params — NO seed_genres (avoids 400/404 issues); rely on feature targets
-    params = {
+    # Final params — ENSURE no seed_genres ever go out
+    params: Dict[str, Any] = {
         "limit": min(max(limit, 1), 100),
         "target_energy": VIBE_FEATURES[vibe]["target_energy"],
         "target_valence": VIBE_FEATURES[vibe]["target_valence"],
@@ -167,7 +161,10 @@ def recommend_tracks(
     if market:
         params["market"] = market
 
-    # Call Spotify recommendations
+    # Bulletproof: strip any accidental seed_genres and show what we send
+    params.pop("seed_genres", None)
+    print(">>> RECO PARAMS (no seeds):", params)
+
     with httpx.Client(timeout=20.0) as client:
         r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=auth_header(access_token))
         try:
@@ -177,7 +174,6 @@ def recommend_tracks(
             raise
         items = r.json().get("tracks", [])
 
-    # Fetch audio features for scoring
     track_ids = [t["id"] for t in items if t.get("id")]
     features_map = get_audio_features(access_token, track_ids)
 
@@ -199,7 +195,6 @@ def recommend_tracks(
             dist += weights["tempo"] * ((tempo - vf["max_tempo"]) / 100.0) ** 2
         return -dist
 
-    # Hard filter lyrical vs non-lyrical & return top-N
     results: List[TrackOut] = []
     for t in items:
         fid = t["id"]
