@@ -1,17 +1,27 @@
-# --- MUST be at the very top ---
-import os
+# ---- TOP OF FILE: src/app/spotify.py ----
+import os, time, base64
 from pathlib import Path
-from dotenv import load_dotenv
 
-ENV_PATH = Path(__file__).resolve().parents[2] / ".env"  # <project>/.env
+from dotenv import load_dotenv
+import httpx
+from tenacity import retry, stop_after_attempt, wait_fixed
+from itsdangerous import URLSafeSerializer
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+# Load .env from project root *before* reading any env vars
+ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(ENV_PATH, override=True)
 
-# Now read env vars AFTER loading .env
+SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
+SPOTIFY_API = "https://api.spotify.com/v1"
+
 CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
 APP_SECRET_KEY = os.getenv("APP_SECRET_KEY", "dev-secret")
 BASE_URL = os.getenv("APP_BASE_URL", "http://127.0.0.1:8000")
+# ---- keep the rest of your file below unchanged ----
 from pathlib import Path
 from dotenv import load_dotenv
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
