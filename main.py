@@ -1,4 +1,4 @@
-# src/app/main.py
+# src/app/main.py  (only the top part changed to include a print)
 
 from typing import Optional, List
 from fastapi import FastAPI, Depends, HTTPException
@@ -9,6 +9,9 @@ from sqlalchemy import select
 from .db import get_db, Base, engine
 from .models import UserToken
 from .auth import router as auth_router
+
+# IMPORTANT: import the module itself so we can print its file path
+from . import spotify as spotify_module
 from .spotify import (
     ensure_valid_token,
     get_me,
@@ -18,11 +21,14 @@ from .spotify import (
 )
 from .vibes import VIBE_FEATURES
 
-# Create DB tables on startup
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Vibe Music Recommender", version="1.0.0")
 app.include_router(auth_router)
+
+# PROVE WHICH FILES ARE RUNNING
+print(">>> LOADED main.py FROM:", __file__)
+print(">>> LOADED spotify.py FROM:", spotify_module.__file__)
 
 # -------------------- DEBUG ROUTES --------------------
 @app.get("/debug/ping")
