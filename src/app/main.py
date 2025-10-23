@@ -97,3 +97,18 @@ def recommend_and_create(body: RecommendAndCreateIn, db: Session = Depends(get_d
         "url": f"https://open.spotify.com/playlist/{pid}",
         "tracks": [t.model_dump() for t in tracks],
     }
+
+from sqlalchemy import select
+from .models import UserToken
+
+@app.get("/debug/user/{sid}")
+def debug_user(sid: str, db: Session = Depends(get_db)):
+    ut = db.execute(select(UserToken).where(UserToken.spotify_user_id == sid)).scalars().first()
+    if not ut:
+        return {"found": False}
+    return {
+        "found": True,
+        "expires_at": ut.token_expires_at,
+        "scope": ut.token_scope,
+        "has_refresh": bool(ut.refresh_token),
+    }
