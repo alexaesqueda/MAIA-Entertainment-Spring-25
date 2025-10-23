@@ -1,28 +1,33 @@
-import os
+# src/app/main.py
+
 from typing import Optional, List
 from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+from sqlalchemy import select
+
 from .db import get_db, Base, engine
 from .models import UserToken
 from .auth import router as auth_router
-from .spotify import ensure_valid_token, get_me, recommend_tracks, create_playlist, add_tracks_to_playlist
+from .spotify import (
+    ensure_valid_token,
+    get_me,
+    recommend_tracks,
+    create_playlist,
+    add_tracks_to_playlist,
+)
 from .vibes import VIBE_FEATURES
 
+# Create DB tables on startup
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Vibe Music Recommender", version="1.0.0")
 app.include_router(auth_router)
 
-# --- DEBUG HELPERS ---
+# -------------------- DEBUG ROUTES --------------------
 @app.get("/debug/ping")
 def debug_ping():
     return {"ok": True}
-from sqlalchemy import select
-from fastapi import Depends
-from sqlalchemy.orm import Session
-from .db import get_db
-from .models import UserToken
 
 @app.get("/debug/user/{sid}")
 def debug_user(sid: str, db: Session = Depends(get_db)):
@@ -35,8 +40,7 @@ def debug_user(sid: str, db: Session = Depends(get_db)):
         "scope": ut.token_scope,
         "has_refresh": bool(ut.refresh_token),
     }
-# --- END DEBUG ---
-
+# ------------------ END DEBUG ROUTES ------------------
 
 class RecommendIn(BaseModel):
     spotify_user_id: str = Field(..., description="Spotify user id returned from /callback")
@@ -64,16 +68,14 @@ class RecommendAndCreateIn(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"oklol": True}
+    return {"ok": True}
 
 @app.get("/vibes")
 def vibes():
     return {"vibes": list(VIBE_FEATURES.keys()), "details": VIBE_FEATURES}
 
 def get_user_token(db: Session, spotify_user_id: str) -> UserToken:
-    from sqlalchemy import select
-    stmt = select(UserToken).where(UserToken.spotify_user_id == spotify_user_id)
-    ut = db.execute(stmt).scalars().first()
+    ut = db.execute(select(UserToken).where(UserToken.spotify_user_id == spotify_user_id)).scalars().first()
     if not ut:
         raise HTTPException(status_code=404, detail="User not authorized. Call /login then /callback first.")
     return ut
@@ -120,19 +122,4 @@ def recommend_and_create(body: RecommendAndCreateIn, db: Session = Depends(get_d
         "playlist_id": pid,
         "url": f"https://open.spotify.com/playlist/{pid}",
         "tracks": [t.model_dump() for t in tracks],
-    }
-
-from sqlalchemy import select
-from .models import UserToken
-
-@app.get("/debug/user/{sid}")
-def debug_user(sid: str, db: Session = Depends(get_db)):
-    ut = db.execute(select(UserToken).where(UserToken.spotify_user_id == sid)).scalars().first()
-    if not ut:
-        return {"found": False}
-    return {
-        "found": True,
-        "expires_at": ut.token_expires_at,
-        "scope": ut.token_scope,
-        "has_refresh": bool(ut.refresh_token),
     }
