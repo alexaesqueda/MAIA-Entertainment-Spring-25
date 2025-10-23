@@ -14,6 +14,31 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Vibe Music Recommender", version="1.0.0")
 app.include_router(auth_router)
 
+# --- DEBUG HELPERS ---
+from sqlalchemy import select
+from fastapi import Depends
+from sqlalchemy.orm import Session
+from .db import get_db
+from .models import UserToken
+
+@app.get("/debug/user/{sid}")
+def debug_user(sid: str, db: Session = Depends(get_db)):
+    ut = db.execute(select(UserToken).where(UserToken.spotify_user_id == sid)).scalars().first()
+    if not ut:
+        return {"found": False}
+    return {
+        "found": True,
+        "expires_at": ut.token_expires_at,
+        "scope": ut.token_scope,
+        "has_refresh": bool(ut.refresh_token),
+    }
+
+@app.get("/debug/ping")
+def debug_ping():
+    return {"ok": True}
+# --- END DEBUG ---
+
+
 class RecommendIn(BaseModel):
     spotify_user_id: str = Field(..., description="Spotify user id returned from /callback")
     vibe: str
