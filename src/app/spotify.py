@@ -38,6 +38,7 @@ from sqlalchemy.orm import Session
 from .models import UserToken
 from .vibes import VIBE_FEATURES, VIBE_SEED_GENRES, instrumental_filter_threshold
 from httpx import HTTPStatusError
+from functools import lru_cache
 # ---- Safe seed genres + helper ----
 ALLOWED_SEED_GENRES = {
     # Subset of Spotify's documented seeds; safe broadly
@@ -105,6 +106,17 @@ def auth_url() -> str:
     return "https://accounts.spotify.com/authorize?" + up.urlencode(params)
 
 @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
+
+@lru_cache(maxsize=1)
+def _cached_allowed_seeds(access_token: str) -> set:
+    """Fetch Spotify's official allowed seed genres and cache them for this run."""
+    with httpx.Client(timeout=15.0) as client:
+        r = client.get(f"{SPOTIFY_API}/recommendations/available-genre-seeds",
+                       headers=auth_header(access_token))
+        r.raise_for_status()
+        data = r.json()
+        return set(data.get("genres", []))
+
 def exchange_code_for_tokens(code: str) -> Dict[str, Any]:
     headers = {"Authorization": "Basic " + encode_basic_auth(CLIENT_ID, CLIENT_SECRET)}
     data = {
@@ -173,11 +185,13 @@ def recommend_tracks(
     vibe = vibe.lower()
     if vibe not in VIBE_FEATURES:
         raise ValueError(f"Unsupported vibe '{vibe}'. Supported: {list(VIBE_FEATURES.keys())}")
-  # Instrumentalness band based on lyrical toggle (already computed above)
+    # Instrumentalness band based on lyrical toggle
     lo, hi = instrumental_filter_threshold(lyrical)
 
     # --- BEGIN hardened recommendations request ---
-    seed_list = _filtered_seed_genres(VIBE_SEED_GENRES.get(vibe, []))
+    # 1) Intersect our vibe seeds with Spotify's live allowed seeds
+    allowed = _cached_allowed_seeds(access_token)
+    seed_list = [g for g in VIBE_SEED_GENRES.get(vibe, []) if g in allowed][:5]
 
     params = {
         "limit": min(max(limit, 1), 100),
@@ -194,19 +208,29 @@ def recommend_tracks(
     if seed_list:
         params["seed_genres"] = ",".join(seed_list)
 
-    with httpx.Client(timeout=20.0) as client:
-        try:
-            r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=auth_header(access_token))
+    def _call(params_dict):
+        with httpx.Client(timeout=20.0) as client:
+            r = client.get(f"{SPOTIFY_API}/recommendations", params=params_dict, headers=auth_header(access_token))
             r.raise_for_status()
-        except HTTPStatusError as e:
-            # If Spotify rejects seeds (400), retry without seed_genres
-            if e.response is not None and e.response.status_code == 400 and "seed" in e.response.text.lower():
-                params.pop("seed_genres", None)
-                r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=auth_header(access_token))
-                r.raise_for_status()
-            else:
-                raise
-        items = r.json().get("tracks", [])
+            return r
+
+    try:
+        r = _call(params)
+    except HTTPStatusError as e:
+        # Log for terminal visibility
+        text = e.response.text if e.response is not None else ""
+        print("Recommendations error:", e.response.status_code if e.response else "?", text)
+
+        # Retry once **without** seed_genres on any 4xx except 401
+        code = e.response.status_code if e.response is not None else 0
+        if code in (400, 403, 404, 409, 422):
+            params.pop("seed_genres", None)
+            r = _call(params)
+        else:
+            raise
+
+    items = r.json().get("tracks", [])
+    # --- END hardened recommendations request ---
     # --- END hardened recommendations request ---
 
     # Pull audio features and compute a vibe score to sort
