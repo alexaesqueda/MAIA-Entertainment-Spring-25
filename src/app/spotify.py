@@ -1,6 +1,8 @@
-# ---- TOP OF FILE: src/app/spotify.py ----
+# src/app/spotify.py  — clean version
+
 import os, time, base64
 from pathlib import Path
+from typing import Dict, List, Any, Optional
 
 from dotenv import load_dotenv
 import httpx
@@ -9,7 +11,10 @@ from itsdangerous import URLSafeSerializer
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-# Load .env from project root *before* reading any env vars
+from .models import UserToken
+from .vibes import VIBE_FEATURES, instrumental_filter_threshold
+
+# ---- Load .env BEFORE reading any env vars ----
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(ENV_PATH, override=True)
 
@@ -20,46 +25,8 @@ CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
 APP_SECRET_KEY = os.getenv("APP_SECRET_KEY", "dev-secret")
+# Base URL should be the server root, not /callback
 BASE_URL = os.getenv("APP_BASE_URL", "http://127.0.0.1:8000")
-# ---- keep the rest of your file below unchanged ----
-from pathlib import Path
-from dotenv import load_dotenv
-ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
-load_dotenv(ENV_PATH)
-from dotenv import load_dotenv
-load_dotenv()
-import os, time, base64
-from typing import Dict, List, Any, Optional, Tuple
-import httpx
-from tenacity import retry, stop_after_attempt, wait_fixed
-from itsdangerous import URLSafeSerializer
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from .models import UserToken
-from .vibes import VIBE_FEATURES, VIBE_SEED_GENRES, instrumental_filter_threshold
-from httpx import HTTPStatusError
-from functools import lru_cache
-# ---- Safe seed genres + helper ----
-ALLOWED_SEED_GENRES = {
-    # Subset of Spotify's documented seeds; safe broadly
-    "acoustic","alt-rock","alternative","ambient","classical","dance","dancehall","edm",
-    "electronic","folk","funk","groove","hard-rock","hip-hop","house","indie","indie-pop",
-    "jazz","metal","minimal-techno","new-age","piano","pop","power-pop","progressive-house",
-    "punk","r-n-b","rock","singer-songwriter","study","techno","trance"
-}
-
-def _filtered_seed_genres(raw):
-    return [g for g in (raw or []) if g in ALLOWED_SEED_GENRES][:5]
-# -----------------------------------
-
-SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
-SPOTIFY_API = "https://api.spotify.com/v1"
-
-CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
-CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
-REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
-APP_SECRET_KEY = os.getenv("APP_SECRET_KEY", "dev-secret")
-BASE_URL = os.getenv("APP_BASE_URL", "http://127.0.0.1:8000/callback")
 
 SERIALIZER = URLSafeSerializer(APP_SECRET_KEY, salt="state-salt")
 
@@ -67,9 +34,10 @@ SCOPES = [
     "playlist-modify-private",
     "playlist-modify-public",
     "user-read-email",
-    "user-read-private"
+    "user-read-private",
 ]
 SCOPE_STR = " ".join(SCOPES)
+
 
 class TrackOut(BaseModel):
     id: str
@@ -80,21 +48,27 @@ class TrackOut(BaseModel):
     external_url: Optional[str] = None
     features: Dict[str, Any]
 
+
 def encode_basic_auth(client_id: str, client_secret: str) -> str:
     token = f"{client_id}:{client_secret}".encode("utf-8")
     return base64.b64encode(token).decode("utf-8")
 
+
 def auth_header(token: str) -> Dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
 
 def build_state(payload: Dict[str, Any]) -> str:
     return SERIALIZER.dumps(payload)
 
+
 def parse_state(state: str) -> Dict[str, Any]:
     return SERIALIZER.loads(state)
 
+
 def auth_url() -> str:
     import urllib.parse as up
+
     params = {
         "client_id": CLIENT_ID,
         "response_type": "code",
@@ -105,18 +79,8 @@ def auth_url() -> str:
     }
     return "https://accounts.spotify.com/authorize?" + up.urlencode(params)
 
+
 @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
-
-@lru_cache(maxsize=1)
-def _cached_allowed_seeds(access_token: str) -> set:
-    """Fetch Spotify's official allowed seed genres and cache them for this run."""
-    with httpx.Client(timeout=15.0) as client:
-        r = client.get(f"{SPOTIFY_API}/recommendations/available-genre-seeds",
-                       headers=auth_header(access_token))
-        r.raise_for_status()
-        data = r.json()
-        return set(data.get("genres", []))
-
 def exchange_code_for_tokens(code: str) -> Dict[str, Any]:
     headers = {"Authorization": "Basic " + encode_basic_auth(CLIENT_ID, CLIENT_SECRET)}
     data = {
@@ -129,30 +93,28 @@ def exchange_code_for_tokens(code: str) -> Dict[str, Any]:
         r.raise_for_status()
         return r.json()
 
+
 @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
 def refresh_access_token(refresh_token: str) -> Dict[str, Any]:
     headers = {"Authorization": "Basic " + encode_basic_auth(CLIENT_ID, CLIENT_SECRET)}
-    data = {
-        "grant_type": "refresh_token",
-        "refresh_token": refresh_token
-    }
+    data = {"grant_type": "refresh_token", "refresh_token": refresh_token}
     with httpx.Client(timeout=15.0) as client:
         r = client.post(SPOTIFY_TOKEN_URL, data=data, headers=headers)
         r.raise_for_status()
         return r.json()
 
+
 def ensure_valid_token(db: Session, user: UserToken) -> UserToken:
     if time.time() < user.token_expires_at - 30:
         return user
     refreshed = refresh_access_token(user.refresh_token)
-    access_token = refreshed["access_token"]
-    expires_in = refreshed.get("expires_in", 3600)
-    user.access_token = access_token
-    user.token_expires_at = int(time.time()) + int(expires_in)
+    user.access_token = refreshed["access_token"]
+    user.token_expires_at = int(time.time()) + int(refreshed.get("expires_in", 3600))
     db.add(user)
     db.commit()
     db.refresh(user)
     return user
+
 
 def get_me(access_token: str) -> Dict[str, Any]:
     with httpx.Client(timeout=15.0) as client:
@@ -160,38 +122,38 @@ def get_me(access_token: str) -> Dict[str, Any]:
         r.raise_for_status()
         return r.json()
 
+
 def get_audio_features(access_token: str, track_ids: List[str]) -> Dict[str, Dict[str, Any]]:
     if not track_ids:
         return {}
-    # Spotify supports up to 100 ids per call
     features_map: Dict[str, Dict[str, Any]] = {}
     with httpx.Client(timeout=20.0) as client:
         for i in range(0, len(track_ids), 100):
-            ids = ",".join(track_ids[i:i+100])
+            ids = ",".join(track_ids[i : i + 100])
             r = client.get(f"{SPOTIFY_API}/audio-features", params={"ids": ids}, headers=auth_header(access_token))
             r.raise_for_status()
-            for item in r.json()["audio_features"]:
+            for item in r.json().get("audio_features", []):
                 if item and item.get("id"):
                     features_map[item["id"]] = item
     return features_map
+
 
 def recommend_tracks(
     access_token: str,
     vibe: str,
     lyrical: bool,
     limit: int = 30,
-    market: Optional[str] = None
+    market: Optional[str] = None,
 ) -> List[TrackOut]:
-    # ---- VALIDATE VIBE ----
+    # Validate vibe
     vibe = vibe.lower()
     if vibe not in VIBE_FEATURES:
         raise ValueError(f"Unsupported vibe '{vibe}'. Supported: {list(VIBE_FEATURES.keys())}")
 
-    # ---- INSTRUMENTALNESS TARGET FROM TOGGLE ----
+    # Instrumentalness target from toggle
     lo, hi = instrumental_filter_threshold(lyrical)
 
-    # ---- BUILD PARAMS (NO seed_genres) ----
-    # Using only audio-feature targets avoids seed issues that cause 404/400
+    # Build params — NO seed_genres (avoids 400/404 issues); rely on feature targets
     params = {
         "limit": min(max(limit, 1), 100),
         "target_energy": VIBE_FEATURES[vibe]["target_energy"],
@@ -205,18 +167,17 @@ def recommend_tracks(
     if market:
         params["market"] = market
 
-    # ---- CALL SPOTIFY RECOMMENDATIONS ----
+    # Call Spotify recommendations
     with httpx.Client(timeout=20.0) as client:
         r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=auth_header(access_token))
         try:
             r.raise_for_status()
         except httpx.HTTPStatusError as e:
-            # Print for visibility, then bubble up
             print("Recommendations failed:", e.response.status_code if e.response else "?", e.response.text if e.response else "")
             raise
         items = r.json().get("tracks", [])
 
-    # ---- FETCH AUDIO FEATURES FOR SCORING ----
+    # Fetch audio features for scoring
     track_ids = [t["id"] for t in items if t.get("id")]
     features_map = get_audio_features(access_token, track_ids)
 
@@ -224,14 +185,7 @@ def recommend_tracks(
         if not feat:
             return 0.0
         vf = VIBE_FEATURES[vibe]
-        weights = {
-            "energy": 2.0,
-            "valence": 1.8,
-            "acousticness": 1.2,
-            "danceability": 1.4,
-            "instrumentalness": 1.5,
-            "tempo": 0.8,
-        }
+        weights = {"energy": 2.0, "valence": 1.8, "acousticness": 1.2, "danceability": 1.4, "instrumentalness": 1.5, "tempo": 0.8}
         dist = 0.0
         dist += weights["energy"] * (feat.get("energy", 0) - vf["target_energy"]) ** 2
         dist += weights["valence"] * (feat.get("valence", 0) - vf["target_valence"]) ** 2
@@ -245,7 +199,7 @@ def recommend_tracks(
             dist += weights["tempo"] * ((tempo - vf["max_tempo"]) / 100.0) ** 2
         return -dist
 
-    # ---- HARD FILTER FOR LYRICAL vs NON-LYRICAL ----
+    # Hard filter lyrical vs non-lyrical & return top-N
     results: List[TrackOut] = []
     for t in items:
         fid = t["id"]
@@ -272,6 +226,7 @@ def recommend_tracks(
     results.sort(key=lambda x: score(x.features), reverse=True)
     return results[:limit]
 
+
 def create_playlist(access_token: str, user_id: str, name: str, description: str, public: bool) -> str:
     payload = {"name": name, "description": description, "public": public}
     with httpx.Client(timeout=15.0) as client:
@@ -279,16 +234,18 @@ def create_playlist(access_token: str, user_id: str, name: str, description: str
         r.raise_for_status()
         return r.json()["id"]
 
+
 def add_tracks_to_playlist(access_token: str, playlist_id: str, uris: List[str]):
     if not uris:
         return
     with httpx.Client(timeout=15.0) as client:
-        r = client.post(f"{SPOTIFY_API}/playlists/{playlist_id}/tracks",
-                        json={"uris": uris}, headers=auth_header(access_token))
+        r = client.post(f"{SPOTIFY_API}/playlists/{playlist_id}/tracks", json={"uris": uris}, headers=auth_header(access_token))
         r.raise_for_status()
+
 
 def get_or_create_user(db: Session, spotify_user_id: str, tokens: Dict[str, Any]) -> UserToken:
     from sqlalchemy import select
+
     stmt = select(UserToken).where(UserToken.spotify_user_id == spotify_user_id)
     existing = db.execute(stmt).scalars().first()
     expires_at = int(time.time()) + int(tokens["expires_in"])
@@ -302,12 +259,13 @@ def get_or_create_user(db: Session, spotify_user_id: str, tokens: Dict[str, Any]
         db.commit()
         db.refresh(existing)
         return existing
+
     ut = UserToken(
         spotify_user_id=spotify_user_id,
         access_token=tokens["access_token"],
         refresh_token=tokens["refresh_token"],
         token_scope=tokens.get("scope", ""),
-        token_expires_at=expires_at
+        token_expires_at=expires_at,
     )
     db.add(ut)
     db.commit()
