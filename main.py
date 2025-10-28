@@ -11,15 +11,15 @@ from models import UserToken
 from auth import router as auth_router
 
 # IMPORTANT: import the module itself so we can print its file path
-from . import spotify as spotify_module
-from .spotify import (
+import spotify as spotify_module
+from spotify import (
     ensure_valid_token,
     get_me,
     recommend_tracks,
     create_playlist,
     add_tracks_to_playlist,
 )
-from .vibes import VIBE_FEATURES
+from vibes import VIBE_FEATURES
 
 Base.metadata.create_all(bind=engine)
 
