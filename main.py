@@ -6,9 +6,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
-from .db import get_db, Base, engine
-from .models import UserToken
-from .auth import router as auth_router
+from db import get_db, Base, engine
+from models import UserToken
+from auth import router as auth_router
 
 # IMPORTANT: import the module itself so we can print its file path
 from . import spotify as spotify_module
