@@ -11,7 +11,7 @@ from src.app.models import UserToken
 from src.app.auth import router as auth_router
 
 # IMPORTANT: import the module itself so we can print its file path
-from src.app.models import spotify as spotify_module
+from src.app import spotify as spotify_module
 from src.app.spotify import (
     ensure_valid_token,
     get_me,
