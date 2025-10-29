@@ -24,6 +24,9 @@ from src.app.vibes import VIBE_FEATURES
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Vibe Music Recommender", version="1.0.0")
+@app.get("/")
+def home():
+    return {"message": "Backend is live!"}
 app.include_router(auth_router)
 
 # PROVE WHICH FILES ARE RUNNING
