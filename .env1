@@ -1,5 +1,5 @@
 SPOTIFY_CLIENT_ID=9d150aeefbe14c46ac106f9eaaba014d
 SPOTIFY_CLIENT_SECRET=465e5cf190144f8890a84d48ab35704a
-SPOTIFY_REDIRECT_URI=https://maia-entertainment-spring-25-mjyvcu5rn85he4zotwjzdh.streamlit.app/
+SPOTIFY_REDIRECT_URI=https://maia-entertainment-spring-25-mjyvcu5rn85he4zotwjzdh.streamlit.app
 APP_SECRET_KEY=hammy_hammy_hammy_top_secret_string_for_stanza
-APP_BASE_URL=http://127.0.0.1:8000/callback
+APP_BASE_URL=https://maia-entertainment-spring-25.onrender.com
