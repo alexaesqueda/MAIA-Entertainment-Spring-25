@@ -39,7 +39,6 @@ load_dotenv(override=True)
 BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "https://maia-entertainment-spring-25.onrender.com").rstrip("/")
 PAGE_TITLE = "Vibe Music Recommender"
 PAGE_ICON = "🎵"
-st.write("Current BACKEND_BASE_URL =", BACKEND_BASE_URL)
 st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
 
 # ------------------ Minimal styling ------------------
