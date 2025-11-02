@@ -36,7 +36,7 @@ from dotenv import load_dotenv
 
 # ------------------ Config ------------------
 load_dotenv(override=True)
-BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "https://maia-entertainment-spring-25.onrender.com").rstrip("/")
 PAGE_TITLE = "Vibe Music Recommender"
 PAGE_ICON = "🎵"
 
