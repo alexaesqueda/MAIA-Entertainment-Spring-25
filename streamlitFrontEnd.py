@@ -118,6 +118,9 @@ def ensure_logged_in():
     try:
         auth = api_get("/login")
         auth_url = auth.get("auth_url")
+        st.code(auth_url)  # shows the full URL for copy
+        st.markdown(f"[Open Spotify auth]({auth_url})")  # plain anchor link
+        st.link_button("🔐 Log in with Spotify", auth_url, use_container_width=True)  # your existing button
 
     except Exception as e:
         st.error(f"Unable to get login URL from backend: {e}")
