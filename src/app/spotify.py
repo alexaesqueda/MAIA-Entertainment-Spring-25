@@ -148,23 +148,24 @@ def recommend_tracks(
     lo, hi = instrumental_filter_threshold(lyrical)
 
     # Final params — ENSURE no seed_genres ever go out
+    vf = VIBE_FEATURES[vibe]
+    seed_genres = vf.get("seed_genres") or vf.get("genres") or ["pop"]  # safe fallback
+
     params: Dict[str, Any] = {
-        "limit": min(max(limit, 1), 100),
-        "target_energy": VIBE_FEATURES[vibe]["target_energy"],
-        "target_valence": VIBE_FEATURES[vibe]["target_valence"],
-        "target_acousticness": VIBE_FEATURES[vibe]["target_acousticness"],
-        "min_tempo": VIBE_FEATURES[vibe]["min_tempo"],
-        "max_tempo": VIBE_FEATURES[vibe]["max_tempo"],
-        "target_danceability": VIBE_FEATURES[vibe]["target_danceability"],
-        "target_instrumentalness": (lo + hi) / 2.0,
-    }
+         "limit": min(max(limit, 1), 100),
+         "seed_genres": ",".join(seed_genres[:5]),  # <= required by Spotify
+         "target_energy": vf["target_energy"],
+         "target_valence": vf["target_valence"],
+         "target_acousticness": vf["target_acousticness"],
+         "min_tempo": vf["min_tempo"],
+         "max_tempo": vf["max_tempo"],
+         "target_danceability": vf["target_danceability"],
+         "target_instrumentalness": (lo + hi) / 2.0,
+     }
     if market:
         params["market"] = market
 
-    # Bulletproof: strip any accidental seed_genres and show what we send
-    params.pop("seed_genres", None)
-    print(">>> RECO PARAMS (no seeds):", params)
-
+    print(">>> RECO PARAMS:", params)  # keep the debug print
     with httpx.Client(timeout=20.0) as client:
         r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=auth_header(access_token))
         try:
