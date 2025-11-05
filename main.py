@@ -91,16 +91,24 @@ def get_user_token(db: Session, spotify_user_id: str) -> UserToken:
 
 @app.post("/recommend")
 def recommend(body: RecommendIn, db: Session = Depends(get_db)):
-    ut = get_user_token(db, body.spotify_user_id)
-    ut = ensure_valid_token(db, ut)
-    tracks = recommend_tracks(
-        access_token=ut.access_token,
-        vibe=body.vibe,
-        lyrical=body.lyrical,
-        limit=body.limit,
-        market=body.market
-    )
-    return {"count": len(tracks), "tracks": [t.model_dump() for t in tracks]}
+    try:
+        print("Received body:", body)
+        ut = get_user_token(db, body.spotify_user_id)
+        print("User token:", ut)
+        ut = ensure_valid_token(db, ut)
+        print("Validated token:", ut)
+        tracks = recommend_tracks(
+            access_token=ut.access_token,
+            vibe=body.vibe,
+            lyrical=body.lyrical,
+            limit=body.limit,
+            market=body.market
+        )
+        print("Tracks generated:", tracks)
+        return {"count": len(tracks), "tracks": [t.model_dump() for t in tracks]}
+    except Exception as e:
+        print("ERROR in /recommend:", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/playlist")
 def playlist(body: PlaylistIn, db: Session = Depends(get_db)):
