@@ -103,8 +103,8 @@ def recommend(body: RecommendIn, db: Session = Depends(get_db)):
             "energetic": "dance",
             "sad": "acoustic",
             "happy": "pop",
-            "focus": "lo-fi",
-            "epic": "movie_score"
+            "focus": "ambient",
+            "epic": "cinematic"
         }
         seed_genre = genre_map.get(body.vibe.lower(), "pop")
         
