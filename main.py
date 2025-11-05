@@ -99,12 +99,12 @@ def recommend(body: RecommendIn, db: Session = Depends(get_db)):
         print("Validated token:", ut)
 
         genre_map = {
-            "mellow": "acoustic",
-            "energetic": "dance",
-            "sad": "acoustic",
+            "mellow": "soul",
+            "energetic": "party",
+            "sad": "sad",
             "happy": "pop",
             "focus": "ambient",
-            "epic": "cinematic"
+            "epic": "soundtracks"
         }
         seed_genre = genre_map.get(body.vibe.lower(), "pop")
         
