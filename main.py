@@ -99,7 +99,7 @@ def recommend(body: RecommendIn, db: Session = Depends(get_db)):
         print("Validated token:", ut)
 
         genre_map = {
-            "mellow": "soul",
+            "mellow": "chill",
             "energetic": "party",
             "sad": "sad",
             "happy": "pop",
