@@ -97,12 +97,23 @@ def recommend(body: RecommendIn, db: Session = Depends(get_db)):
         print("User token:", ut)
         ut = ensure_valid_token(db, ut)
         print("Validated token:", ut)
+        genre_map = {
+            "mellow": "acoustic",
+            "energetic": "dance",
+            "sad": "acoustic",
+            "happy": "pop",
+            "focus": "lo-fi",
+            "epic": "movie_score"
+        }
+        seed_genre = genre_map.get(body.vibe.lower(), "pop")
+        
         tracks = recommend_tracks(
             access_token=ut.access_token,
             vibe=body.vibe,
             lyrical=body.lyrical,
             limit=body.limit,
-            market=body.market
+            market=body.market,
+            seed_genres=seed_genre
         )
         print("Tracks generated:", tracks)
         return {"count": len(tracks), "tracks": [t.model_dump() for t in tracks]}
