@@ -140,6 +140,7 @@ def recommend_tracks(
     lyrical: bool,
     limit: int = 30,
     market: Optional[str] = None,
+    seed_genres: Optional[str] = "pop"
 ) -> List[TrackOut]:
     vibe = vibe.lower()
     if vibe not in VIBE_FEATURES:
@@ -150,6 +151,7 @@ def recommend_tracks(
     # Final params — ENSURE no seed_genres ever go out
     params: Dict[str, Any] = {
         "limit": min(max(limit, 1), 100),
+        "seed_genres": seed_genres,
         "target_energy": VIBE_FEATURES[vibe]["target_energy"],
         "target_valence": VIBE_FEATURES[vibe]["target_valence"],
         "target_acousticness": VIBE_FEATURES[vibe]["target_acousticness"],
@@ -161,9 +163,7 @@ def recommend_tracks(
     if market:
         params["market"] = market
 
-    # Bulletproof: strip any accidental seed_genres and show what we send
-    params.pop("seed_genres", None)
-    print(">>> RECO PARAMS (no seeds):", params)
+    print(">>> RECO PARAMS (including seeds):", params)
     
     with httpx.Client(timeout=20.0) as client:
         r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=auth_header(access_token))
