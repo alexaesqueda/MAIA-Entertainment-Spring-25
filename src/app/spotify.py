@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from .models import UserToken
-from .vibes import VIBE_FEATURES, instrumental_filter_threshold
+from .vibes import VIBE_FEATURES, instrumental_filter_threshold, VIBE_SEED_GENRES
 # from functools import lru_cache
 
 # ---- Load .env BEFORE reading any env vars ----
