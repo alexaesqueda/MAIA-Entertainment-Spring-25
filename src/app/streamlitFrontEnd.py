@@ -70,6 +70,7 @@ if "selected_uris" not in st.session_state:
     st.session_state.selected_uris = set()
 
 # ------------------ Backend helpers ------------------
+st.write("SID:", st.session_state.get("spotify_user_id"))
 
 def api_get(path: str, params: dict | None = None, timeout: int = 20):
     url = f"{BACKEND_BASE_URL}{path}"
