@@ -183,8 +183,6 @@ def recommend_tracks(
         params["market"] = market
 
     print(">>> RECO PARAMS (including seeds):", params)
-
-    print(seed_genres)
     
     with httpx.Client(timeout=20.0) as client:
         r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=auth_header(access_token))
