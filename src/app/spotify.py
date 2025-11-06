@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from .models import UserToken
 from .vibes import VIBE_FEATURES, instrumental_filter_threshold
+from functools import lru_cache
 
 # ---- Load .env BEFORE reading any env vars ----
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
@@ -58,6 +59,14 @@ def encode_basic_auth(client_id: str, client_secret: str) -> str:
 def auth_header(token: str) -> Dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
+@lru_cache(maxsize=1)
+def get_available_genre_seeds(access_token: str) -> set[str]:
+    """Fetch and cache Spotify's valid genre seeds (once per app run)."""
+    with httpx.Client(timeout=15.0) as client:
+        r = client.get(f"{SPOTIFY_API}/recommendations/available-genre-seeds",
+                       headers=auth_header(access_token))
+        r.raise_for_status()
+        return set(r.json().get("genres", []))
 
 def build_state(payload: Dict[str, Any]) -> str:
     return SERIALIZER.dumps(payload)
@@ -147,11 +156,21 @@ def recommend_tracks(
         raise ValueError(f"Unsupported vibe '{vibe}'. Supported: {list(VIBE_FEATURES.keys())}")
 
     lo, hi = instrumental_filter_threshold(lyrical)
+    allowed = get_available_genre_seeds(access_token)
 
-    # Final params — ENSURE no seed_genres ever go out
+    requested = [g.strip().lower() for g in (seed_genres or "pop").split(",") if g.strip()]
+    picked = [g for g in requested if g in allowed]
+
+    if not picked:
+        vibe_seeds = [g for g in VIBE_SEED_GENRES.get(vibe, []) if g in allowed]
+        picked = vibe_seeds[:5] or (["pop"] if "pop" in allowed else list(allowed)[:1])
+
+    print(f"Chosen seed_genres for vibe '{vibe}':", picked)
+
+    # Final params 
     params: Dict[str, Any] = {
         "limit": min(max(limit, 1), 100),
-        "seed_genres": seed_genres,
+        "seed_genres": ",".join(picked[:5]),
         "target_energy": VIBE_FEATURES[vibe]["target_energy"],
         "target_valence": VIBE_FEATURES[vibe]["target_valence"],
         "target_acousticness": VIBE_FEATURES[vibe]["target_acousticness"],
