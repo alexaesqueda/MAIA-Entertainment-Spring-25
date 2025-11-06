@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from .models import UserToken
-from .vibes import VIBE_FEATURES, instrumental_filter_threshold, VIBE_SEED_GENRES
+from .vibes import VIBE_FEATURES, instrumental_filter_threshold
 # from functools import lru_cache
 
 # ---- Load .env BEFORE reading any env vars ----
@@ -58,27 +58,6 @@ def encode_basic_auth(client_id: str, client_secret: str) -> str:
 
 def auth_header(token: str) -> Dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
-
-def get_available_genre_seeds(access_token: str) -> set[str]:
-    if not access_token:
-        # hard stop: don’t even call Spotify without a token
-        from fastapi import HTTPException
-        raise HTTPException(status_code=401, detail="Spotify access token missing for genre seeds.")
-    url = f"{SPOTIFY_API}/recommendations/available-genre-seeds"
-    headers = auth_header(access_token)
-    print("GENRE-SEEDS TOKEN LEN:", len(access_token))
-    print("GENRE-SEEDS HEADER:", {"Authorization": f"Bearer ...{access_token[-6:]}"})
-    with httpx.Client(timeout=15.0) as client:
-        try:
-            r = client.get(url, headers=headers)
-            r.raise_for_status()
-            genres = r.json().get("genres", [])
-            print("GENRE-SEEDS COUNT:", len(genres))
-            return set(genres)
-        except httpx.HTTPStatusError as e:
-            print("GENRE-SEEDS FAILED:", e.response.status_code if e.response else "?", e.response.text if e.response else "")
-            # graceful fallback so /recommend still works
-            return set()
 
 def build_state(payload: Dict[str, Any]) -> str:
     return SERIALIZER.dumps(payload)
@@ -161,97 +140,74 @@ def recommend_tracks(
     lyrical: bool,
     limit: int = 30,
     market: Optional[str] = None,
-    seed_genres: Optional[str] = "pop"
 ) -> List[TrackOut]:
     vibe = vibe.lower()
 
-    # --- DEBUG: confirm if token exists and its length ---
+    # --- DEBUG: confirm token presence ---
     print("DEBUG token present:", bool(access_token),
           "len:", len(access_token) if access_token else 0)
-    # -----------------------------------------------------
-
     if not access_token:
         from fastapi import HTTPException
         raise HTTPException(status_code=401, detail="Spotify access token missing. Please reconnect.")
-    
+    # -------------------------------------
+
     if vibe not in VIBE_FEATURES:
         raise ValueError(f"Unsupported vibe '{vibe}'. Supported: {list(VIBE_FEATURES.keys())}")
 
     lo, hi = instrumental_filter_threshold(lyrical)
-    # --- Fetch valid Spotify genre seeds (gracefully handle failures) ---
-    allowed = set()
-    url = f"{SPOTIFY_API}/recommendations/available-genre-seeds"
-    headers = auth_header(access_token)
-    
-    print("GENRE-SEEDS CALL:", url)
-    print("GENRE-SEEDS TOKEN LEN:", len(access_token))
-    print("GENRE-SEEDS HEADER:", {"Authorization": f"Bearer ...{access_token[-6:]}"})
-    
-    with httpx.Client(timeout=15.0) as client:
-        try:
-            r = client.get(url, headers=headers)
-            if r.status_code == 401:
-                print("GENRE-SEEDS unauthorized — falling back to defaults.")
-                allowed = set()
-            else:
-                r.raise_for_status()
-                allowed = set(r.json().get("genres", []))
-                print("GENRE-SEEDS COUNT:", len(allowed))
-        except httpx.HTTPStatusError as e:
-            print("GENRE-SEEDS FAILED:", e.response.status_code if e.response else "?", e.response.text if e.response else "")
-            allowed = set()
-        except Exception as e:
-            print("GENRE-SEEDS EXCEPTION:", repr(e))
-            allowed = set()
-    
-    # Final safety net
-    if not allowed:
-        print("No allowed seeds fetched — using default fallback.")
-        allowed = {"pop", "rock", "dance", "edm", "hip-hop", "ambient", "classical"}
-    # -------------------------------------------------------------------
 
-    requested = [g.strip().lower() for g in (seed_genres or "pop").split(",") if g.strip()]
-    picked = [g for g in requested if g in allowed]
-
-    if not picked:
-        vibe_seeds = [g for g in VIBE_SEED_GENRES.get(vibe, []) if g in allowed]
-        picked = vibe_seeds[:5] or (["pop"] if "pop" in allowed else list(allowed)[:1])
-
-    print(f"Chosen seed_genres for vibe '{vibe}':", picked)
-
-    # Final params 
+    # --- Build params WITHOUT seeds (seedless mode) ---
+    vf = VIBE_FEATURES[vibe]
     params: Dict[str, Any] = {
         "limit": min(max(limit, 1), 100),
-        "seed_genres": ",".join(picked[:5]),
-        "target_energy": VIBE_FEATURES[vibe]["target_energy"],
-        "target_valence": VIBE_FEATURES[vibe]["target_valence"],
-        "target_acousticness": VIBE_FEATURES[vibe]["target_acousticness"],
-        "min_tempo": VIBE_FEATURES[vibe]["min_tempo"],
-        "max_tempo": VIBE_FEATURES[vibe]["max_tempo"],
-        "target_danceability": VIBE_FEATURES[vibe]["target_danceability"],
+        "target_energy": vf["target_energy"],
+        "target_valence": vf["target_valence"],
+        "target_acousticness": vf["target_acousticness"],
+        "min_tempo": vf["min_tempo"],
+        "max_tempo": vf["max_tempo"],
+        "target_danceability": vf["target_danceability"],
         "target_instrumentalness": (lo + hi) / 2.0,
     }
     if market:
         params["market"] = market
 
-    print(">>> RECO PARAMS (including seeds):", params)
-    
+    print(">>> RECO PARAMS (seedless):", params)
+    # --------------------------------------------------
+
+    # --- Spotify recommendations call ---
     with httpx.Client(timeout=20.0) as client:
         headers = auth_header(access_token)
         print("DEBUG sending headers:",
               {"Authorization": f"Bearer ...{access_token[-6:]}" if access_token else None})
         print("DEBUG calling Spotify recommendations with params:", params)
 
-        r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=headers)
         try:
+            r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=headers)
             r.raise_for_status()
+            items = r.json().get("tracks", [])
         except httpx.HTTPStatusError as e:
-            print("Recommendations failed:",
-                  e.response.status_code if e.response else "?",
-                  e.response.text if e.response else "")
-            raise
-
-        items = r.json().get("tracks", [])
+            # Optional gentle fallback if constraints are too tight
+            if e.response is not None and e.response.status_code == 404:
+                print("Spotify 404 (no matches). Loosening constraints slightly and retrying (still seedless).")
+                loose = params.copy()
+                # widen bounds a bit
+                loose["min_tempo"] = max(vf["min_tempo"] - 10, 0)
+                loose["max_tempo"] = vf["max_tempo"] + 10
+                # add soft bands around targets
+                loose["min_energy"]  = max(vf["target_energy"] - 0.15, 0)
+                loose["max_energy"]  = min(vf["target_energy"] + 0.15, 1)
+                loose["min_valence"] = max(vf["target_valence"] - 0.20, 0)
+                loose["max_valence"] = min(vf["target_valence"] + 0.20, 1)
+                print(">>> RETRY PARAMS (seedless, loosened):", loose)
+                r = client.get(f"{SPOTIFY_API}/recommendations", params=loose, headers=headers)
+                r.raise_for_status()
+                items = r.json().get("tracks", [])
+            else:
+                print("Recommendations failed:",
+                      e.response.status_code if e.response else "?",
+                      e.response.text if e.response else "")
+                raise
+    # ------------------------------------
 
     track_ids = [t["id"] for t in items if t.get("id")]
     features_map = get_audio_features(access_token, track_ids)
