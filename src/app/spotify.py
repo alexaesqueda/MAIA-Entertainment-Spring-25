@@ -152,6 +152,12 @@ def recommend_tracks(
     seed_genres: Optional[str] = "pop"
 ) -> List[TrackOut]:
     vibe = vibe.lower()
+
+    # --- DEBUG: confirm if token exists and its length ---
+    print("DEBUG token present:", bool(access_token),
+          "len:", len(access_token) if access_token else 0)
+    # -----------------------------------------------------
+    
     if vibe not in VIBE_FEATURES:
         raise ValueError(f"Unsupported vibe '{vibe}'. Supported: {list(VIBE_FEATURES.keys())}")
 
@@ -185,13 +191,24 @@ def recommend_tracks(
     print(">>> RECO PARAMS (including seeds):", params)
     
     with httpx.Client(timeout=20.0) as client:
-        r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=auth_header(access_token))
-        try:
-            r.raise_for_status()
-        except httpx.HTTPStatusError as e:
-            print("Recommendations failed:", e.response.status_code if e.response else "?", e.response.text if e.response else "")
-            raise
-        items = r.json().get("tracks", [])
+    # --- DEBUG: confirm token is being sent ---
+    headers = auth_header(access_token)
+    print("DEBUG sending headers:",
+          {"Authorization": f"Bearer ...{access_token[-6:]}" if access_token else None})
+    print("DEBUG calling Spotify recommendations with params:", params)
+    # -----------------------------------------
+
+    r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=headers)
+    try:
+        r.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        print("Recommendations failed:",
+              e.response.status_code if e.response else "?",
+              e.response.text if e.response else "")
+        raise
+
+    # ✅ You were missing this:
+    items = r.json().get("tracks", [])
 
     track_ids = [t["id"] for t in items if t.get("id")]
     features_map = get_audio_features(access_token, track_ids)
