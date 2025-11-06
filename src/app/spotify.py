@@ -180,23 +180,34 @@ def recommend_tracks(
     lo, hi = instrumental_filter_threshold(lyrical)
     # --- Fetch valid Spotify genre seeds (gracefully handle failures) ---
     allowed = set()
-    try:
-        url = f"{SPOTIFY_API}/recommendations/available-genre-seeds"
-        print("GENRE-SEEDS CALL:", url)
-        print("GENRE-SEEDS TOKEN LEN:", len(access_token))
-        headers = auth_header(access_token)
-        print("GENRE-SEEDS HEADER:", {"Authorization": f"Bearer ...{access_token[-6:]}"})
-        with httpx.Client(timeout=15.0) as client:
+    url = f"{SPOTIFY_API}/recommendations/available-genre-seeds"
+    headers = auth_header(access_token)
+    
+    print("GENRE-SEEDS CALL:", url)
+    print("GENRE-SEEDS TOKEN LEN:", len(access_token))
+    print("GENRE-SEEDS HEADER:", {"Authorization": f"Bearer ...{access_token[-6:]}"})
+    
+    with httpx.Client(timeout=15.0) as client:
+        try:
             r = client.get(url, headers=headers)
-            r.raise_for_status()
-            allowed = set(r.json().get("genres", []))
-            print("GENRE-SEEDS COUNT:", len(allowed))
-    except httpx.HTTPStatusError as e:
-        print("GENRE-SEEDS FAILED:",
-              e.response.status_code if e.response else "?",
-              e.response.text if e.response else "")
-    except Exception as e:
-        print("GENRE-SEEDS EXCEPTION:", repr(e))
+            if r.status_code == 401:
+                print("GENRE-SEEDS unauthorized — falling back to defaults.")
+                allowed = set()
+            else:
+                r.raise_for_status()
+                allowed = set(r.json().get("genres", []))
+                print("GENRE-SEEDS COUNT:", len(allowed))
+        except httpx.HTTPStatusError as e:
+            print("GENRE-SEEDS FAILED:", e.response.status_code if e.response else "?", e.response.text if e.response else "")
+            allowed = set()
+        except Exception as e:
+            print("GENRE-SEEDS EXCEPTION:", repr(e))
+            allowed = set()
+    
+    # Final safety net
+    if not allowed:
+        print("No allowed seeds fetched — using default fallback.")
+        allowed = {"pop", "rock", "dance", "edm", "hip-hop", "ambient", "classical"}
     # -------------------------------------------------------------------
 
     requested = [g.strip().lower() for g in (seed_genres or "pop").split(",") if g.strip()]
