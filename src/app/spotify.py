@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from .models import UserToken
 from .vibes import VIBE_FEATURES, instrumental_filter_threshold
-from functools import lru_cache
+# from functools import lru_cache
 
 # ---- Load .env BEFORE reading any env vars ----
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
@@ -59,14 +59,26 @@ def encode_basic_auth(client_id: str, client_secret: str) -> str:
 def auth_header(token: str) -> Dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
-@lru_cache(maxsize=1)
 def get_available_genre_seeds(access_token: str) -> set[str]:
-    """Fetch and cache Spotify's valid genre seeds (once per app run)."""
+    if not access_token:
+        # hard stop: don’t even call Spotify without a token
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Spotify access token missing for genre seeds.")
+    url = f"{SPOTIFY_API}/recommendations/available-genre-seeds"
+    headers = auth_header(access_token)
+    print("GENRE-SEEDS TOKEN LEN:", len(access_token))
+    print("GENRE-SEEDS HEADER:", {"Authorization": f"Bearer ...{access_token[-6:]}"})
     with httpx.Client(timeout=15.0) as client:
-        r = client.get(f"{SPOTIFY_API}/recommendations/available-genre-seeds",
-                       headers=auth_header(access_token))
-        r.raise_for_status()
-        return set(r.json().get("genres", []))
+        try:
+            r = client.get(url, headers=headers)
+            r.raise_for_status()
+            genres = r.json().get("genres", [])
+            print("GENRE-SEEDS COUNT:", len(genres))
+            return set(genres)
+        except httpx.HTTPStatusError as e:
+            print("GENRE-SEEDS FAILED:", e.response.status_code if e.response else "?", e.response.text if e.response else "")
+            # graceful fallback so /recommend still works
+            return set()
 
 def build_state(payload: Dict[str, Any]) -> str:
     return SERIALIZER.dumps(payload)
@@ -157,12 +169,35 @@ def recommend_tracks(
     print("DEBUG token present:", bool(access_token),
           "len:", len(access_token) if access_token else 0)
     # -----------------------------------------------------
+
+    if not access_token:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Spotify access token missing. Please reconnect.")
     
     if vibe not in VIBE_FEATURES:
         raise ValueError(f"Unsupported vibe '{vibe}'. Supported: {list(VIBE_FEATURES.keys())}")
 
     lo, hi = instrumental_filter_threshold(lyrical)
-    allowed = get_available_genre_seeds(access_token)
+    # --- Fetch valid Spotify genre seeds (gracefully handle failures) ---
+    allowed = set()
+    try:
+        url = f"{SPOTIFY_API}/recommendations/available-genre-seeds"
+        print("GENRE-SEEDS CALL:", url)
+        print("GENRE-SEEDS TOKEN LEN:", len(access_token))
+        headers = auth_header(access_token)
+        print("GENRE-SEEDS HEADER:", {"Authorization": f"Bearer ...{access_token[-6:]}"})
+        with httpx.Client(timeout=15.0) as client:
+            r = client.get(url, headers=headers)
+            r.raise_for_status()
+            allowed = set(r.json().get("genres", []))
+            print("GENRE-SEEDS COUNT:", len(allowed))
+    except httpx.HTTPStatusError as e:
+        print("GENRE-SEEDS FAILED:",
+              e.response.status_code if e.response else "?",
+              e.response.text if e.response else "")
+    except Exception as e:
+        print("GENRE-SEEDS EXCEPTION:", repr(e))
+    # -------------------------------------------------------------------
 
     requested = [g.strip().lower() for g in (seed_genres or "pop").split(",") if g.strip()]
     picked = [g for g in requested if g in allowed]
@@ -191,24 +226,21 @@ def recommend_tracks(
     print(">>> RECO PARAMS (including seeds):", params)
     
     with httpx.Client(timeout=20.0) as client:
-    # --- DEBUG: confirm token is being sent ---
-    headers = auth_header(access_token)
-    print("DEBUG sending headers:",
-          {"Authorization": f"Bearer ...{access_token[-6:]}" if access_token else None})
-    print("DEBUG calling Spotify recommendations with params:", params)
-    # -----------------------------------------
+        headers = auth_header(access_token)
+        print("DEBUG sending headers:",
+              {"Authorization": f"Bearer ...{access_token[-6:]}" if access_token else None})
+        print("DEBUG calling Spotify recommendations with params:", params)
 
-    r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=headers)
-    try:
-        r.raise_for_status()
-    except httpx.HTTPStatusError as e:
-        print("Recommendations failed:",
-              e.response.status_code if e.response else "?",
-              e.response.text if e.response else "")
-        raise
+        r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=headers)
+        try:
+            r.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            print("Recommendations failed:",
+                  e.response.status_code if e.response else "?",
+                  e.response.text if e.response else "")
+            raise
 
-    # ✅ You were missing this:
-    items = r.json().get("tracks", [])
+        items = r.json().get("tracks", [])
 
     track_ids = [t["id"] for t in items if t.get("id")]
     features_map = get_audio_features(access_token, track_ids)
