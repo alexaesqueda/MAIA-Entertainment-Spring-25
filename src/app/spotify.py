@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from .models import UserToken
-from .vibes import VIBE_FEATURES, instrumental_filter_threshold
+from .vibes import VIBE_FEATURES, instrumental_filter_threshold, VIBE_SEED_GENRES
 # from functools import lru_cache
 
 # ---- Load .env BEFORE reading any env vars ----
@@ -159,9 +159,11 @@ def recommend_tracks(
     # --- Build params WITHOUT seeds (seedless mode) ---
     vf = VIBE_FEATURES[vibe]
     avg_tempo = (vf["min_tempo"] + vf["max_tempo"]) / 2.0
+    seed_list = VIBE_SEED_GENRES.get(vibe, ["pop"])
+    seed_str = ",".join(seed_list[:5])
     params: Dict[str, Any] = {
         "limit": min(max(limit, 1), 100),
-        "seed_genres": "pop",  # required seed so Spotify accepts the request
+        "seed_genres": seed_str,  # required seed so Spotify accepts the request
         "target_energy": vf["target_energy"],
         "target_valence": vf["target_valence"],
         "target_acousticness": vf["target_acousticness"],
