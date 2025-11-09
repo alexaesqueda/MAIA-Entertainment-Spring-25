@@ -160,6 +160,7 @@ def recommend_tracks(
     vf = VIBE_FEATURES[vibe]
     params: Dict[str, Any] = {
         "limit": min(max(limit, 1), 100),
+        "seed_genres": "pop",
         "target_energy": vf["target_energy"],
         "target_valence": vf["target_valence"],
         "target_acousticness": vf["target_acousticness"],
