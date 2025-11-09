@@ -133,6 +133,27 @@ def get_audio_features(access_token: str, track_ids: List[str]) -> Dict[str, Dic
                     features_map[item["id"]] = item
     return features_map
 
+def debug_audio_features(access_token: str, track_id: str):
+    """
+    Quick test: check whether this app can access Spotify's /audio-features endpoint.
+    Run it manually on a known track ID.
+    """
+    import httpx
+    from .spotify import auth_header, SPOTIFY_API
+
+    url = f"{SPOTIFY_API}/audio-features/{track_id}"
+    headers = auth_header(access_token)
+    print("DEBUG Testing /audio-features on:", track_id)
+    print("DEBUG URL:", url)
+
+    try:
+        r = httpx.get(url, headers=headers, timeout=10.0)
+        print("Status:", r.status_code)
+        print("Body (first 300 chars):", r.text[:300])
+        return r.status_code, r.text
+    except Exception as e:
+        print("EXCEPTION:", repr(e))
+        return None, repr(e)
 
 def recommend_tracks(
     access_token: str,
