@@ -161,53 +161,36 @@ def recommend_tracks(
     avg_tempo = (vf["min_tempo"] + vf["max_tempo"]) / 2.0
     params: Dict[str, Any] = {
         "limit": min(max(limit, 1), 100),
-        "seed_genres": "pop",
+        "seed_genres": "pop",  # required seed so Spotify accepts the request
         "target_energy": vf["target_energy"],
         "target_valence": vf["target_valence"],
         "target_acousticness": vf["target_acousticness"],
-        "target_tempo": avg_tempo,
+        "min_tempo": vf["min_tempo"],
+        "max_tempo": vf["max_tempo"],
         "target_danceability": vf["target_danceability"],
         "target_instrumentalness": (lo + hi) / 2.0,
     }
     if market:
         params["market"] = market
 
-    print(">>> RECO PARAMS (seedless):", params)
-    # --------------------------------------------------
+    print(">>> RECO PARAMS (no min/max energy/valence):", params)
 
-    # --- Spotify recommendations call ---
     with httpx.Client(timeout=20.0) as client:
         headers = auth_header(access_token)
         print("DEBUG sending headers:",
               {"Authorization": f"Bearer ...{access_token[-6:]}" if access_token else None})
-        print("DEBUG calling Spotify recommendations with params:", params)
-
         try:
             r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=headers)
             r.raise_for_status()
             items = r.json().get("tracks", [])
         except httpx.HTTPStatusError as e:
-            # Optional gentle fallback if constraints are too tight
-            if e.response is not None and e.response.status_code == 404:
-                print("Spotify 404 (no matches). Loosening constraints slightly and retrying (still seedless).")
-                loose = params.copy()
-                # widen bounds a bit
-                loose["min_tempo"] = max(vf["min_tempo"] - 10, 0)
-                loose["max_tempo"] = vf["max_tempo"] + 10
-                # add soft bands around targets
-                loose["min_energy"]  = max(vf["target_energy"] - 0.15, 0)
-                loose["max_energy"]  = min(vf["target_energy"] + 0.15, 1)
-                loose["min_valence"] = max(vf["target_valence"] - 0.20, 0)
-                loose["max_valence"] = min(vf["target_valence"] + 0.20, 1)
-                print(">>> RETRY PARAMS (seedless, loosened):", loose)
-                r = client.get(f"{SPOTIFY_API}/recommendations", params=loose, headers=headers)
-                r.raise_for_status()
-                items = r.json().get("tracks", [])
-            else:
-                print("Recommendations failed:",
-                      e.response.status_code if e.response else "?",
-                      e.response.text if e.response else "")
-                raise
+            print("Recommendations failed:",
+                  e.response.status_code if e.response else "?",
+                  e.response.text if e.response else "")
+            raise
+
+    track_ids = [t["id"] for t in items if t.get("id")]
+    features_map = get_audio_features(access_token, track_ids)
     # ------------------------------------
 
     track_ids = [t["id"] for t in items if t.get("id")]
