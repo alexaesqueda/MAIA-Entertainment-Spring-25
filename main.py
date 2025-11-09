@@ -133,6 +133,7 @@ def playlist(body: PlaylistIn, db: Session = Depends(get_db)):
 def recommend_and_create(body: RecommendAndCreateIn, db: Session = Depends(get_db)):
     ut = get_user_token(db, body.spotify_user_id)
     ut = ensure_valid_token(db, ut)
+    debug_audio_features(ut.access_token, "3n3Ppam7vgaVa1iaRUc9Lp")
     tracks = recommend_tracks(
         access_token=ut.access_token,
         vibe=body.vibe,
