@@ -177,6 +177,38 @@ def recommend_tracks(
 
     print(">>> RECO PARAMS (no min/max energy/valence):", params)
 
+
+    print("\n--- DEBUG Spotify Recommendations Request ---")
+    print("Request URL:", f"{SPOTIFY_API}/recommendations")
+    print("Request Parameters:", params)
+    print("Headers being sent (last 6 chars of token):",
+          {"Authorization": f"Bearer ...{access_token[-6:]}" if access_token else None})
+    if access_token:
+        # TEMPORARY: Print full token for direct cURL test. REMOVE THIS LATER!
+        print("FULL ACCESS TOKEN (for cURL test, REMOVE THIS):", access_token)
+    print("---------------------------------------------")
+
+    with httpx.Client(timeout=20.0) as client:
+        headers = auth_header(access_token)
+        try:
+            r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=headers)
+            r.raise_for_status()
+            items = r.json().get("tracks", [])
+        except httpx.HTTPStatusError as e:
+            print("Recommendations failed (HTTPStatusError):",
+                  e.response.status_code if e.response else "?",
+                  e.response.text if e.response else "")
+            # ADDITION: Print entire request details if available
+            if e.request:
+                print("Request method:", e.request.method)
+                print("Request URL:", e.request.url)
+                print("Request headers:", e.request.headers) # Check full headers
+            raise # Re-raise to propagate the error
+        except httpx.RequestError as e:
+            print(f"Recommendations failed (RequestError - network, DNS, etc.): {e}")
+            raise # Re-raise
+
+# The original httpx code
     with httpx.Client(timeout=20.0) as client:
         headers = auth_header(access_token)
         print("DEBUG sending headers:",
