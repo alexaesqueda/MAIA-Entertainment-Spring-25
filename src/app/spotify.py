@@ -158,14 +158,14 @@ def recommend_tracks(
 
     # --- Build params WITHOUT seeds (seedless mode) ---
     vf = VIBE_FEATURES[vibe]
+    avg_tempo = (vf["min_tempo"] + vf["max_tempo"]) / 2.0
     params: Dict[str, Any] = {
         "limit": min(max(limit, 1), 100),
         "seed_genres": "pop",
         "target_energy": vf["target_energy"],
         "target_valence": vf["target_valence"],
         "target_acousticness": vf["target_acousticness"],
-        "min_tempo": vf["min_tempo"],
-        "max_tempo": vf["max_tempo"],
+        "target_tempo": avg_tempo,
         "target_danceability": vf["target_danceability"],
         "target_instrumentalness": (lo + hi) / 2.0,
     }
