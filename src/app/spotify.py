@@ -166,6 +166,11 @@ def recommend_tracks(
         "seed_genres": seed_str,  # required seed so Spotify accepts the request
         "target_energy": vf["target_energy"],
         "target_valence": vf["target_valence"]
+        "target_acousticness": vf["target_acousticness"],
+        "min_tempo": vf["min_tempo"],
+        "max_tempo": vf["max_tempo"],
+        "target_danceability": vf["target_danceability"],
+        "target_instrumentalness": (lo + hi) / 2.0
     }
     if market:
         params["market"] = market
