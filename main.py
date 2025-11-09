@@ -106,15 +106,13 @@ def recommend(body: RecommendIn, db: Session = Depends(get_db)):
             "focus": "ambient",
             "epic": "soundtracks"
         }
-        seed_genre = genre_map.get(body.vibe.lower(), "pop")
         
         tracks = recommend_tracks(
             access_token=ut.access_token,
             vibe=body.vibe,
             lyrical=body.lyrical,
             limit=body.limit,
-            market=body.market,
-            seed_genres=seed_genre
+            market=body.market
         )
         print("Tracks generated:", tracks)
         return {"count": len(tracks), "tracks": [t.model_dump() for t in tracks]}
