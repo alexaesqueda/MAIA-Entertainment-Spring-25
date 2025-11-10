@@ -32,9 +32,7 @@ app.include_router(auth_router)
 # PROVE WHICH FILES ARE RUNNING
 print(">>> LOADED main.py FROM:", __file__)
 print(">>> LOADED spotify.py FROM:", spotify_module.__file__)
-ut = get_user_token(db, body.spotify_user_id)
-ut = ensure_valid_token(db, ut)
-debug_audio_features(ut.access_token, "3n3Ppam7vgaVa1iaRUc9Lp")
+
 
 
 # -------------------- DEBUG ROUTES --------------------
@@ -101,6 +99,7 @@ def recommend(body: RecommendIn, db: Session = Depends(get_db)):
         print("User token:", ut)
         ut = ensure_valid_token(db, ut)
         print("Validated token:", ut)
+        debug_audio_features(ut.access_token, "3n3Ppam7vgaVa1iaRUc9Lp")
 
         genre_map = {
             "mellow": "chill",
