@@ -185,7 +185,7 @@ def recommend_tracks(
     params: Dict[str, Any] = {
         "limit": min(max(limit, 1), 100),
         "seed_genres": seed_str,  # required seed so Spotify accepts the request
-        "target_energy": target_energy,
+        "target_energy": vf["target_energy"],
         "target_valence": vf["target_valence"],
         "target_acousticness": vf["target_acousticness"],
         "min_tempo": vf["min_tempo"],
