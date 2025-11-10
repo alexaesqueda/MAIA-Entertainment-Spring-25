@@ -99,7 +99,6 @@ def recommend(body: RecommendIn, db: Session = Depends(get_db)):
         print("User token:", ut)
         ut = ensure_valid_token(db, ut)
         print("Validated token:", ut)
-        debug_audio_features(ut.access_token, "3n3Ppam7vgaVa1iaRUc9Lp")
 
         genre_map = {
             "mellow": "chill",
