@@ -194,6 +194,12 @@ def recommend_tracks(
             r = client.get(f"{SPOTIFY_API}/recommendations", params=params, headers=headers)
             r.raise_for_status()
             items = r.json().get("tracks", [])
+            for t in items:
+                preview_url=t.get("preview_url")
+                if preview_url != None:
+                    print(preview_url, "PREVIEW URL EXISTSSSSSSSSSSSS")
+                else:
+                    print("NO PREVIEW")
         except httpx.HTTPStatusError as e:
             print("Recommendations failed (HTTPStatusError):",
                   e.response.status_code if e.response else "?",
