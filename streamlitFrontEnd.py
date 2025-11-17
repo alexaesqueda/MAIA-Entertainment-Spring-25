@@ -46,94 +46,105 @@ st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
 st.markdown(
     """
     <style>
-      /* Global theme with gradient background */
-      .stApp {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      }
+      /* ... keep your existing styles ... */
       
-      /* Main content container - frosted glass effect */
-      .main .block-container {
-        padding: 2rem 3rem;
-        max-width: 1200px;
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 24px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        margin-top: 2rem;
-      }
-      
-      /* Buttons with gradient and hover effects */
-      .stButton>button {
+      /* PRIMARY ACTION BUTTONS - High contrast */
+      .stButton>button[kind="primary"] {
         border-radius: 16px;
         padding: 0.75rem 2rem;
-        font-weight: 600;
+        font-weight: 700;
         border: none;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        color: white !important;
+        font-size: 1.1rem;
         transition: all 0.3s ease;
         box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.2);  /* Adds depth to text */
+      }
+      
+      .stButton>button[kind="primary"]:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+      }
+      
+      /* SECONDARY BUTTONS - Clear contrast */
+      .stButton>button {
+        border-radius: 12px;
+        padding: 0.6rem 1.5rem;
+        font-weight: 600;
+        border: 2px solid #667eea;
+        background: white;
+        color: #667eea !important;
+        font-size: 1rem;
+        transition: all 0.3s ease;
       }
       
       .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        background: #667eea;
+        color: white !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
       }
       
-      /* Enhanced track cards with gradient and shadows */
-      .card {
-        border: none;
-        border-radius: 20px;
-        padding: 20px;
-        margin-bottom: 16px;
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-        transition: all 0.3s ease;
-      }
+      /* TEXT CONTRAST IMPROVEMENTS */
       
-      .card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 32px rgba(0,0,0,0.18);
-      }
-      
-      /* Gradient text headers */
-      h1 {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 3.5rem !important;
-        font-weight: 800 !important;
-      }
-      
+      /* Section headers - bolder */
       h2 {
-        color: #667eea;
-        font-weight: 700;
+        color: #4c51bf !important;  /* Darker purple for better readability */
+        font-weight: 800 !important;
         margin-top: 2rem !important;
         font-size: 1.8rem !important;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.05);
       }
       
-      /* Animated pill badges */
-      .pill {
-        display: inline-block;
-        padding: 6px 16px;
-        border-radius: 999px;
-        font-size: 13px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        margin-right: 8px;
-        font-weight: 600;
-        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+      /* Body text - stronger contrast */
+      p, .stMarkdown, label {
+        color: #374151 !important;  /* Dark gray instead of light gray */
+        font-size: 1rem;
       }
       
-      /* Metric badges for track info */
-      .metric-badge {
-        display: inline-block;
-        background: rgba(102, 126, 234, 0.1);
-        color: #667eea;
-        padding: 4px 12px;
-        border-radius: 8px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        margin-right: 8px;
+      /* Captions - more visible */
+      .stCaption, caption, small {
+        color: #6b7280 !important;  /* Medium gray, not too light */
+        font-weight: 500;
       }
+      
+      /* Link buttons - high visibility */
+      .stLinkButton>a {
+        border-radius: 16px;
+        padding: 0.75rem 2rem;
+        font-weight: 700;
+        border: none;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        color: white !important;
+        font-size: 1.1rem;
+        text-decoration: none !important;
+        display: inline-block;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+      }
+      
+      .stLinkButton>a:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+        background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+      }
+      
+      /* Input labels - darker for readability */
+      .stTextInput>label, .stTextArea>label, .stSelectbox>label, .stSlider>label {
+        color: #1f2937 !important;
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
+      }
+      
+      /* Toggle labels */
+      .stCheckbox>label, [data-testid="stWidgetLabel"] {
+        color: #374151 !important;
+        font-weight: 600 !important;
+      }
+      
     </style>
     """,
     unsafe_allow_html=True,
