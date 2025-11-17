@@ -246,7 +246,8 @@ def header():
             st.markdown(
                 f"""
                 <div style='text-align:right; padding:12px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                border-radius:16px; color:white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);'>
+                border-radius:16px; color:white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                max-width:200px; margin-left:auto;'>
                     <div style='font-size:0.9rem; opacity:0.9;'>🎧 Connected</div>
                     <div style='font-weight:700; font-size:1.1rem; margin-top:4px;'>{st.session_state.spotify_user_id}</div>
                 </div>
