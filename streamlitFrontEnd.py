@@ -233,7 +233,7 @@ def ensure_logged_in():
     box-shadow: 0 10px 30px rgba(5, 150, 105, 0.3);'>
         <h2 style='color:white; margin-bottom:16px; font-weight:800;'>
             🎵 Welcome to Vibe Music!
-        </h2>
+        </h2 style='color:white>
         <p style='font-size:1.1rem; color:#d1fae5; font-weight:500; margin-bottom:32px;'>
             Connect your Spotify account to discover AI-powered music recommendations<br>
             tailored perfectly to your mood.
@@ -255,6 +255,10 @@ def ensure_logged_in():
         st.link_button("🎧 Connect with Spotify", auth_url, use_container_width=True)
     
     return False
+   
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    st.link_button("🎧 Connect with Spotify", auth_url, use_container_width=True)
 
 # ------------------ Data fetchers ------------------
 
