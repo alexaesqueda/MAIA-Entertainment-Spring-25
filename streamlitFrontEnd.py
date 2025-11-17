@@ -256,8 +256,6 @@ except Exception as e:
     st.error(f"❌ Unable to get login URL from backend: {e}")
     return False
 
-return False
-
 # ------------------ Data fetchers ------------------
 
 @st.cache_data(show_spinner=False, ttl=300)
