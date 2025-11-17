@@ -243,20 +243,20 @@ def ensure_logged_in():
     unsafe_allow_html=True
 )
     
-      try:
-          auth = api_get("/login")
-          auth_url = auth.get("auth_url")
-          
-          # Button code moved INSIDE the try block
-          col1, col2, col3 = st.columns([1, 2, 1])
-          with col2:
-              st.link_button("🎧 Connect with Spotify", auth_url, use_container_width=True)
-              
-      except Exception as e:
-          st.error(f"❌ Unable to get login URL from backend: {e}")
-          return False
-      
-      return False
+         try:
+             auth = api_get("/login")
+             auth_url = auth.get("auth_url")
+             
+             # Button code moved INSIDE the try block
+             col1, col2, col3 = st.columns([1, 2, 1])
+             with col2:
+                 st.link_button("🎧 Connect with Spotify", auth_url, use_container_width=True)
+                 
+         except Exception as e:
+             st.error(f"❌ Unable to get login URL from backend: {e}")
+             return False
+         
+         return False
 # ------------------ Data fetchers ------------------
 
 @st.cache_data(show_spinner=False, ttl=300)
