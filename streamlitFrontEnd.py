@@ -94,12 +94,19 @@ st.markdown(
       }
       
       /* Section headers - bolder */
-      h2 {
+      /* Only style h2 in main content, NOT in custom divs */
+      .main > div > h2 {
         color: #4c51bf !important;
         font-weight: 800 !important;
         margin-top: 2rem !important;
         font-size: 1.8rem !important;
         text-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      }
+      
+      /* Force white text in welcome box */
+      div[style*="background: linear-gradient(135deg, #065f46"] h2,
+      div[style*="background: linear-gradient(135deg, #065f46"] p {
+        color: white !important;
       }
       
       /* Body text - stronger contrast */
