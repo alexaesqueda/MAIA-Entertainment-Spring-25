@@ -245,11 +245,11 @@ def header():
         if st.session_state.spotify_user_id:
             st.markdown(
                 f"""
-                <div style='text-align:right; padding:12px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                border-radius:16px; color:white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-                max-width:200px; margin-left:auto;'>
-                    <div style='font-size:0.9rem; opacity:0.9;'>🎧 Connected</div>
-                    <div style='font-weight:700; font-size:1.1rem; margin-top:4px;'>{st.session_state.spotify_user_id}</div>
+                <div style='display:inline-block; width:fit-content; margin-left:auto; float:right;
+                text-align:center; padding:10px 14px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                border-radius:12px; color:white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);'>
+                    <div style='font-size:0.8rem; opacity:0.9; white-space:nowrap;'>🎧 Connected</div>
+                    <div style='font-weight:700; font-size:0.9rem; margin-top:2px; white-space:nowrap;'>{st.session_state.spotify_user_id}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
