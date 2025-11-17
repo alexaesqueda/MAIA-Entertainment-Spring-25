@@ -138,7 +138,8 @@ st.markdown(
       }
       
       .err { 
-        color: #ef4444;
+        # color: #ef4444;
+        color: #5906bf;
         font-weight: 600;
       }
       
