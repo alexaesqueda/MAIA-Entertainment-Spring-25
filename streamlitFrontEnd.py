@@ -36,6 +36,22 @@ PAGE_ICON = "🎵"
 st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
 
 # ------------------ Complete Styling ------------------
+st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
+
+# Just this small style block to override global purple
+st.markdown(
+    """
+    <style>
+      div[style*="#065f46"] h2,
+      div[style*="#065f46"] p {
+        color: white !important;
+      }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
 st.markdown(
     """
     <style>
