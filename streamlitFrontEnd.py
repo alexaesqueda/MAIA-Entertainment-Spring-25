@@ -109,10 +109,19 @@ st.markdown(
         color: #ffffff !important;
       }
       
-      /* Body text - stronger contrast */
-      p, .stMarkdown, label {
+      /* Body text - stronger contrast (but not in welcome box) */
+      .main p:not([style*="color: white"]), 
+      .stMarkdown, 
+      label {
         color: #374151 !important;
         font-size: 1rem;
+      }
+      
+      /* Force white for welcome box content */
+      div[style*="linear-gradient(135deg, #065f46"] h2,
+      div[style*="linear-gradient(135deg, #065f46"] p {
+        color: white !important;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.3);
       }
       
       /* Captions - more visible */
