@@ -255,11 +255,6 @@ def ensure_logged_in():
         st.link_button("🎧 Connect with Spotify", auth_url, use_container_width=True)
     
     return False
-   
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    st.link_button("🎧 Connect with Spotify", auth_url, use_container_width=True)
-
 # ------------------ Data fetchers ------------------
 
 @st.cache_data(show_spinner=False, ttl=300)
