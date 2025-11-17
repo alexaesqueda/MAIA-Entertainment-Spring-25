@@ -508,7 +508,7 @@ def create_playlist_block(vibe: str):
 
 def main():
     header()
-   if not ensure_logged_in():
+    if not ensure_logged_in():
            st.stop() 
 
     # with st.container(border=True):
