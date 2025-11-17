@@ -30,7 +30,9 @@ from dotenv import load_dotenv
 # ------------------ Config ------------------
 load_dotenv(override=True)
 BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "https://maia-entertainment-spring-25.onrender.com").rstrip("/")
-PAGE_TITLE = "Stanza"
+git add stanzalogo.png
+PAGE_TITLE = stanzalogo.png
+#PAGE_TITLE = "Stanza"
 PAGE_ICON = "🎵"
 
 st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
