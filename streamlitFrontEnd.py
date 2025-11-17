@@ -46,12 +46,94 @@ st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
 st.markdown(
     """
     <style>
-      .stButton>button { border-radius: 12px; padding: 0.6rem 1rem; font-weight: 600; }
-      .pill { display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; background:#f0f2f6; margin-right:6px; }
-      .ok { color:#0a7f2e; }
-      .err { color:#a60f2d; }
-      .subtle { color:#666; }
-      .card { border:1px solid #ececec; border-radius:14px; padding:14px; margin-bottom:10px; background:white; }
+      /* Global theme with gradient background */
+      .stApp {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      }
+      
+      /* Main content container - frosted glass effect */
+      .main .block-container {
+        padding: 2rem 3rem;
+        max-width: 1200px;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 24px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        margin-top: 2rem;
+      }
+      
+      /* Buttons with gradient and hover effects */
+      .stButton>button {
+        border-radius: 16px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        border: none;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      }
+      
+      .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+      }
+      
+      /* Enhanced track cards with gradient and shadows */
+      .card {
+        border: none;
+        border-radius: 20px;
+        padding: 20px;
+        margin-bottom: 16px;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        transition: all 0.3s ease;
+      }
+      
+      .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+      }
+      
+      /* Gradient text headers */
+      h1 {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 3.5rem !important;
+        font-weight: 800 !important;
+      }
+      
+      h2 {
+        color: #667eea;
+        font-weight: 700;
+        margin-top: 2rem !important;
+        font-size: 1.8rem !important;
+      }
+      
+      /* Animated pill badges */
+      .pill {
+        display: inline-block;
+        padding: 6px 16px;
+        border-radius: 999px;
+        font-size: 13px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        margin-right: 8px;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+      }
+      
+      /* Metric badges for track info */
+      .metric-badge {
+        display: inline-block;
+        background: rgba(102, 126, 234, 0.1);
+        color: #667eea;
+        padding: 4px 12px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-right: 8px;
+      }
     </style>
     """,
     unsafe_allow_html=True,
