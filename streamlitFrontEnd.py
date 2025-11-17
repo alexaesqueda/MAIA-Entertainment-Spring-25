@@ -216,7 +216,7 @@ def ensure_logged_in():
                     return True
                 else:
                     st.error("❌ Login callback returned an unexpected response.")
-            ception as e:
+            except Exception as e:
                 st.error(f"❌ Spotify sign‑in failed: {str(e)}")
                 # Show the actual error for debugging
                 with st.expander("🔍 Debug Info"):
