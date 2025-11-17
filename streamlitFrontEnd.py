@@ -37,7 +37,6 @@ st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
 
 # ------------------ Complete Styling ------------------
 st.markdown(
-    "
     <style>
       /* PRIMARY ACTION BUTTONS - High contrast */
       .stButton>button[kind="primary"] {
