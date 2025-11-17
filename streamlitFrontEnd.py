@@ -226,21 +226,22 @@ def ensure_logged_in():
 
     # Show login prompt
     st.markdown(
-        """
-        <div style='text-align:center; padding:60px 40px; background:white; 
-        border-radius:24px; border:3px solid #667eea; margin:40px 0;
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);'>
-            <h2 style='color:#4c51bf; margin-bottom:16px; font-weight:800;'>
-                🎵 Welcome to Vibe Music!
-            </h2>
-            <p style='font-size:1.1rem; color:#374151; font-weight:500; margin-bottom:32px;'>
-                Connect your Spotify account to discover AI-powered music recommendations<br>
-                tailored perfectly to your mood.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    """
+    <div style='text-align:center; padding:60px 40px; 
+    background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+    border-radius:24px; border:3px solid #059669; margin:40px 0;
+    box-shadow: 0 10px 30px rgba(5, 150, 105, 0.3);'>
+        <h2 style='color:white; margin-bottom:16px; font-weight:800;'>
+            🎵 Welcome to Vibe Music!
+        </h2>
+        <p style='font-size:1.1rem; color:#d1fae5; font-weight:500; margin-bottom:32px;'>
+            Connect your Spotify account to discover AI-powered music recommendations<br>
+            tailored perfectly to your mood.
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
     
     try:
         auth = api_get("/login")
