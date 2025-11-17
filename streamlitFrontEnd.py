@@ -17,11 +17,7 @@ Streamlit Frontend — STANZA
    - Spotify redirects the user back to **this Streamlit URL** with `code` and `state`.
    - Streamlit immediately calls your backend `/callback` with those params to finish login.
    - Backend returns `{ ok: True, spotify_user_id }`, which we store in session.
-
 """
-Streamlit Frontend — STANZA (FIXED VERSION)
-=====================================================
-
 
 import os
 import time
