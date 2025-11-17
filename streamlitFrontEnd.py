@@ -106,7 +106,7 @@ st.markdown(
       /* Force white text in welcome box */
       div[style*="background: linear-gradient(135deg, #065f46"] h2,
       div[style*="background: linear-gradient(135deg, #065f46"] p {
-        color: white !important;
+        color: #ffffff !important;
       }
       
       /* Body text - stronger contrast */
