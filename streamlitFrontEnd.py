@@ -30,7 +30,7 @@ from dotenv import load_dotenv
 # ------------------ Config ------------------
 load_dotenv(override=True)
 BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "https://maia-entertainment-spring-25.onrender.com").rstrip("/")
-PAGE_TITLE = "Vibe Music Recommender"
+PAGE_TITLE = "Stanza"
 PAGE_ICON = "🎵"
 
 st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
@@ -247,8 +247,8 @@ def ensure_logged_in():
        background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
        border-radius:24px; border:3px solid #033482; margin:40px 0;
        box-shadow: 0 10px 30px rgba(5, 150, 105, 0.3);'>
-           <h2 style='color: white' !important; margin-bottom:16px !important; font-weight:800 !important; margin-top:0 !important; font-size: 1 !important; text-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;'>
-               🎵 Welcome to Stanza!
+           <h2 style='color: white' !important; margin-bottom:16px !important; font-weight:800 !important; margin-top:0 !important; font-size: 3rem !important; text-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;'>
+               🎵 Welcome to Your Vibe Music Recommender!
            </h2>
            <p style='font-size:1.1rem !important; color: white !important; font-weight:500 !important; margin-bottom:32px !important; text-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;'>
                Connect your Spotify account to discover AI-powered music recommendations<br>
@@ -308,28 +308,34 @@ def fetch_vibes():
 # ------------------ UI Blocks ------------------
 
 def header():
-    left, right = st.columns([0.7, 0.3])
-    with left:
-        st.title(PAGE_TITLE)
-        st.markdown(
-            "<p style='font-size:1.2rem; color:#6b7280; margin-top:-10px;'>"
-            "✨ AI‑driven Spotify recommendations by vibe. Build the perfect playlist in seconds.</p>",
-            unsafe_allow_html=True
-        )
-    with right:
-        if st.session_state.spotify_user_id:
-            st.markdown(
-                f"""
-                <div style='display:inline-block; width:fit-content; margin-left:auto; float:right;
-                text-align:center; padding:10px 14px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                border-radius:12px; color:white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);'>
-                    <div style='font-size:0.8rem; opacity:0.9; white-space:nowrap;'>🎧 Connected</div>
-                    <div style='font-weight:700; font-size:0.95rem; margin-top:2px; white-space:nowrap;'>{st.session_state.spotify_user_id}</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+    # Center the title and tagline
+    st.markdown(
+        f"""
+        <h1 style='text-align:center; font-size:3rem; font-weight:800; margin-bottom:0.5rem;'>
+            {PAGE_TITLE}
+        </h1>
+        <p style='font-size:1.2rem; color:#6b7280; text-align:center; margin-top:-10px;'>
+            ✨ AI‑driven Spotify recommendations by vibe. Build the perfect playlist in seconds.
+        </p>
+        """,
+        unsafe_allow_html=True
+    )
     
+    # Connected status box (centered below)
+    if st.session_state.spotify_user_id:
+        st.markdown(
+            f"""
+            <div style='display:block; width:fit-content; margin:20px auto;
+            text-align:center; padding:10px 14px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            border-radius:12px; color:white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);'>
+                <div style='font-size:0.8rem; opacity:0.9; white-space:nowrap;'>🎧 Connected</div>
+                <div style='font-weight:700; font-size:0.95rem; margin-top:2px; white-space:nowrap;'>{st.session_state.spotify_user_id}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    
+    # Divider
     st.markdown("<div style='height:2px; background:linear-gradient(90deg, transparent, #667eea, transparent); margin:2rem 0;'></div>", unsafe_allow_html=True)
 
 
