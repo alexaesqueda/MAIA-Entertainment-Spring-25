@@ -31,10 +31,10 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "https://maia-entertainment-spring-25.onrender.com").rstrip("/")
 # Navigate to your project folder first
-cd /path/to/your/project/folder
+cp /Users/shrey/Downloads/stanzalogo.png /mount/src/maia-entertainment-spring-25/
 
 # Copy the image from Downloads to your project
-cp ~/Downloads/stanzalogo.png .
+cd /mount/src/maia-entertainment-spring-25/
 git add stanzalogo.png
 #PAGE_TITLE = stanzalogo.png
 PAGE_TITLE = "Stanza"
@@ -329,10 +329,9 @@ def fetch_vibes():
 #     )
 
 def header():
-    # Display logo image
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.image("stanzalogo.png", use_container_width=False, width=300)
+        st.image("stanzalogo.png", width=300)
         st.markdown(
             "<p style='font-size:1.2rem; color:#6b7280; text-align:center; margin-top:0;'>"
             "✨ AI‑driven Spotify recommendations by vibe. Build the perfect playlist in seconds.</p>",
