@@ -18,12 +18,9 @@ Streamlit Frontend — STANZA
    - Streamlit immediately calls your backend `/callback` with those params to finish login.
    - Backend returns `{ ok: True, spotify_user_id }`, which we store in session.
 
---------------------------------------
-Run locally:
---------------------------------------
-$ pip install streamlit requests python-dotenv
-$ streamlit run streamlit_frontend_app.py
---------------------------------------
+"""
+Streamlit Frontend — STANZA (FIXED VERSION)
+=====================================================
 """
 
 import os
@@ -42,12 +39,10 @@ PAGE_ICON = "🎵"
 
 st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
 
-# ------------------ Minimal styling ------------------
+# ------------------ Complete Styling ------------------
 st.markdown(
     """
     <style>
-      /* ... keep your existing styles ... */
-      
       /* PRIMARY ACTION BUTTONS - High contrast */
       .stButton>button[kind="primary"] {
         border-radius: 16px;
@@ -59,7 +54,7 @@ st.markdown(
         font-size: 1.1rem;
         transition: all 0.3s ease;
         box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        text-shadow: 0 1px 2px rgba(0,0,0,0.2);  /* Adds depth to text */
+        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
       }
       
       .stButton>button[kind="primary"]:hover {
@@ -87,11 +82,24 @@ st.markdown(
         box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
       }
       
-      /* TEXT CONTRAST IMPROVEMENTS */
+      /* CARD STYLES - ADDED */
+      .card {
+        border: 1px solid #ececec;
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 10px;
+        background: white;
+        transition: all 0.3s ease;
+      }
       
-      /* Section s - bolder */
+      .card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+      }
+      
+      /* Section headers - bolder */
       h2 {
-        color: #4c51bf !important;  /* Darker purple for better readability */
+        color: #4c51bf !important;
         font-weight: 800 !important;
         margin-top: 2rem !important;
         font-size: 1.8rem !important;
@@ -100,14 +108,25 @@ st.markdown(
       
       /* Body text - stronger contrast */
       p, .stMarkdown, label {
-        color: #374151 !important;  /* Dark gray instead of light gray */
+        color: #374151 !important;
         font-size: 1rem;
       }
       
       /* Captions - more visible */
       .stCaption, caption, small {
-        color: #6b7280 !important;  /* Medium gray, not too light */
+        color: #6b7280 !important;
         font-weight: 500;
+      }
+      
+      /* Status indicators */
+      .ok { 
+        color: #10b981;
+        font-weight: 600;
+      }
+      
+      .err { 
+        color: #ef4444;
+        font-weight: 600;
       }
       
       /* Link buttons - high visibility */
@@ -144,7 +163,6 @@ st.markdown(
         color: #374151 !important;
         font-weight: 600 !important;
       }
-      
     </style>
     """,
     unsafe_allow_html=True,
@@ -182,7 +200,6 @@ def api_post(path: str, payload: dict, timeout: int = 30):
 
 def ensure_logged_in():
     """If redirected from Spotify, finish login. Otherwise show a login button."""
-    # If we just got redirected from Spotify, the URL will contain code & state
     qp = st.query_params
     code = qp.get("code")
     state = qp.get("state")
@@ -191,32 +208,55 @@ def ensure_logged_in():
         return True
 
     if code and state:
-        with st.spinner("Completing Spotify sign‑in..."):
+        with st.spinner("🔐 Completing Spotify sign‑in..."):
             try:
                 data = api_get("/callback", params={"code": code, "state": state})
                 if data.get("ok") and data.get("spotify_user_id"):
                     st.session_state.spotify_user_id = data["spotify_user_id"]
-                    # Clear query params for a clean URL
                     st.query_params.clear()
-                    st.success("You're connected to Spotify.")
+                    st.success("✅ You're connected to Spotify!")
+                    time.sleep(1)
+                    st.rerun()
                     return True
                 else:
-                    st.error("Login callback returned an unexpected response.")
+                    st.error("❌ Login callback returned an unexpected response.")
             except Exception as e:
-                st.error(f"Spotify sign‑in failed: {e}")
+                st.error(f"❌ Spotify sign‑in failed: {str(e)}")
+                # Show the actual error for debugging
+                with st.expander("🔍 Debug Info"):
+                    st.code(str(e))
+                    st.write(f"Backend: {BACKEND_BASE_URL}")
         return False
 
-    # Otherwise we must initiate login
-    st.info("Connect your Spotify account to continue.")
+    # Show login prompt
+    st.markdown(
+        """
+        <div style='text-align:center; padding:60px 40px; background:white; 
+        border-radius:24px; border:3px solid #667eea; margin:40px 0;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);'>
+            <h2 style='color:#4c51bf; margin-bottom:16px; font-weight:800;'>
+                🎵 Welcome to Vibe Music!
+            </h2>
+            <p style='font-size:1.1rem; color:#374151; font-weight:500; margin-bottom:32px;'>
+                Connect your Spotify account to discover AI-powered music recommendations<br>
+                tailored perfectly to your mood.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    
     try:
         auth = api_get("/login")
         auth_url = auth.get("auth_url")
-
     except Exception as e:
-        st.error(f"Unable to get login URL from backend: {e}")
+        st.error(f"❌ Unable to get login URL from backend: {e}")
         return False
 
-    st.link_button("🔐 Log in with Spotify", auth_url, use_container_width=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.link_button("🎧 Connect with Spotify", auth_url, use_container_width=True)
+    
     return False
 
 # ------------------ Data fetchers ------------------
@@ -227,7 +267,6 @@ def fetch_vibes():
         vib = api_get("/vibes")
         return vib.get("vibes", []), vib.get("details", {})
     except Exception:
-        # Fallback in case backend isn't ready
         return ["mellow", "energetic", "sad", "happy", "focus", "epic"], {}
 
 # ------------------ UI Blocks ------------------
@@ -248,17 +287,13 @@ def header():
                 <div style='display:inline-block; width:fit-content; margin-left:auto; float:right;
                 text-align:center; padding:10px 14px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                 border-radius:12px; color:white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);'>
-                    <div style='font-size:1.1rem; opacity:0.9; white-space:nowrap;'>🎧 Connected</div>
-                    <div style='font-weight:700; font-size:1.2rem; margin-top:3px; white-space:nowrap;'>{st.session_state.spotify_user_id}</div>
+                    <div style='font-size:0.8rem; opacity:0.9; white-space:nowrap;'>🎧 Connected</div>
+                    <div style='font-weight:700; font-size:0.95rem; margin-top:2px; white-space:nowrap;'>{st.session_state.spotify_user_id}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
     
-    # Add visual divider
-    st.markdown("<div style='height:2px; background:linear-gradient(90deg, transparent, #667eea, transparent); margin:2rem 0;'></div>", unsafe_allow_html=True)
-    
-    # Add visual divider
     st.markdown("<div style='height:2px; background:linear-gradient(90deg, transparent, #667eea, transparent); margin:2rem 0;'></div>", unsafe_allow_html=True)
 
 
@@ -277,13 +312,13 @@ def vibe_controls():
     with c3:
         limit = st.slider("Track count", 5, 50, 25, step=1)
     with c4:
-        market = st.text_input("Market", value="US", help="Optional e.g. US, GB, AU; leave blank to let Spotify decide.")
+        market = st.text_input("Market", value="US", help="Optional e.g. US, GB, AU")
 
-    # Show tiny spec for the vibe if available
     if st.session_state.vibe_details.get(vibe):
         spec = st.session_state.vibe_details[vibe]
         st.caption(
-            f"Energy: {spec.get('target_energy')}, Valence: {spec.get('target_valence')}, Tempo: {spec.get('min_tempo')}–{spec.get('max_tempo')}"
+            f"Energy: {spec.get('target_energy')}, Valence: {spec.get('target_valence')}, "
+            f"Tempo: {spec.get('min_tempo')}–{spec.get('max_tempo')}"
         )
 
     return vibe, lyrical, limit, (market or None)
@@ -292,12 +327,12 @@ def vibe_controls():
 def recommend_action(vibe: str, lyrical: bool, limit: int, market: str | None):
     st.subheader("2) Get recommendations")
 
-    btn = st.button("✨ Recommend tracks", type="primary", use_container_width=True)
+    btn = st.button("✨ RECOMMEND TRACKS", type="primary", use_container_width=True)
     if btn:
         if not st.session_state.spotify_user_id:
-            st.warning("Please connect Spotify first.")
+            st.warning("⚠️ Please connect Spotify first.")
             return
-        with st.spinner("Fetching recommendations..."):
+        with st.spinner("🎵 Fetching recommendations..."):
             try:
                 payload = {
                     "spotify_user_id": st.session_state.spotify_user_id,
@@ -309,48 +344,53 @@ def recommend_action(vibe: str, lyrical: bool, limit: int, market: str | None):
                 data = api_post("/recommend", payload)
                 st.session_state.rec_tracks = data.get("tracks", [])
                 st.session_state.selected_uris = set(t.get("uri") for t in st.session_state.rec_tracks)
-                st.success(f"Got {len(st.session_state.rec_tracks)} tracks.")
+                st.success(f"🎉 Got {len(st.session_state.rec_tracks)} tracks!")
             except Exception as e:
-                st.error(f"Recommendation failed: {e}")
+                st.error(f"❌ Recommendation failed: {e}")
 
 
 def tracks_table():
     tracks = st.session_state.rec_tracks or []
     if not tracks:
-       st.info("No tracks yet. Click **Recommend tracks** above.")
-       return
+        st.info("🎵 No tracks yet. Click **Recommend tracks** above.")
+        return
 
     st.subheader("3) Review & pick tracks")
-
-    st.caption("Uncheck any songs you don't want in the playlist. You can preview 30s samples when available.")
+    st.caption("Uncheck any songs you don't want in the playlist. Preview 30s samples when available.")
 
     # Bulk selectors
     c1, c2, c3 = st.columns([0.2, 0.2, 0.6])
     with c1:
-        if st.button("Select all"):
+        if st.button("✅ SELECT ALL"):
             st.session_state.selected_uris = set(t.get("uri") for t in tracks)
+            st.rerun()
     with c2:
-        if st.button("Clear all"):
+        if st.button("❌ CLEAR ALL"):
             st.session_state.selected_uris = set()
+            st.rerun()
 
-    # Render as cards for readability
-    for t in tracks:
+    # Render cards
+    for idx, t in enumerate(tracks, 1):
         uri = t.get("uri")
         name = t.get("name")
         artists = ", ".join(t.get("artists", []))
         preview = t.get("preview_url")
         link = t.get("external_url")
         f = t.get("features", {})
+        
         col1, col2 = st.columns([0.05, 0.95])
         with col1:
             checked = uri in st.session_state.selected_uris
-            new_val = st.checkbox("", value=checked, key=f"chk_{uri}")
-            if new_val:
-                st.session_state.selected_uris.add(uri)
-            else:
-                st.session_state.selected_uris.discard(uri)
+            new_val = st.checkbox("", value=checked, key=f"chk_{uri}", label_visibility="collapsed")
+            if new_val != checked:
+                if new_val:
+                    st.session_state.selected_uris.add(uri)
+                else:
+                    st.session_state.selected_uris.discard(uri)
+        
         with col2:
-            st.markdown(f"<div class='card'><b>{name}</b> — {artists}  ", unsafe_allow_html=True)
+            st.markdown(f"<div class='card'><b>#{idx} {name}</b> — {artists}</div>", unsafe_allow_html=True)
+            
             metrics = [
                 ("Energy", f.get("energy")),
                 ("Valence", f.get("valence")),
@@ -363,48 +403,50 @@ def tracks_table():
                     [f"{m}: {v:.2f}" if isinstance(v, (int, float)) else f"{m}: —" for m, v in metrics]
                 )
             )
+            
             if preview:
                 st.audio(preview, format="audio/mp3")
-            tiny = []
+            
             if link:
-                tiny.append(f"<a href='{link}' target='_blank'>Open in Spotify</a>")
-            tiny.append(f"URI: <code>{uri}</code>")
-            st.markdown(" \\| ".join(tiny), unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown(
+                    f"<a href='{link}' target='_blank'>🎵 Open in Spotify</a> | <code>{uri}</code>",
+                    unsafe_allow_html=True
+                )
 
 
 def create_playlist_block(vibe: str):
     tracks = st.session_state.rec_tracks or []
-    selected = [u for u in st.session_state.selected_uris]
+    selected = list(st.session_state.selected_uris)
 
     st.subheader("4) Create playlist")
 
     default_name = f"{vibe.capitalize()} • {time.strftime('%b %d, %Y')}"
     name = st.text_input("Playlist name", value=default_name)
     description = st.text_area("Description", value=f"Auto‑generated {vibe} playlist")
-    colA, colB, colC = st.columns([0.25, 0.25, 0.5])
+    
+    colA, colB = st.columns(2)
     with colA:
         public = st.toggle("Public playlist", value=False)
     with colB:
         use_all = st.toggle("Use all shown tracks", value=True)
 
-    create = st.button("🪄 Create playlist in Spotify", type="primary", use_container_width=True)
+    create = st.button("🪄 CREATE PLAYLIST", type="primary", use_container_width=True)
 
     if create:
         if not st.session_state.spotify_user_id:
-            st.warning("Please connect Spotify first.")
+            st.warning("⚠️ Please connect Spotify first.")
             return
+        
         try:
-            with st.spinner("Creating your playlist..."):
+            with st.spinner("🎵 Creating your playlist..."):
                 if use_all:
-                    # Use backend convenience endpoint (recommend + create in one go)
                     if not tracks:
-                        st.warning("Please fetch recommendations first.")
+                        st.warning("⚠️ Please fetch recommendations first.")
                         return
                     payload = {
                         "spotify_user_id": st.session_state.spotify_user_id,
                         "vibe": vibe,
-                        "lyrical": True,  # Not strictly needed here; keeping explicit is clearer if you wire it up
+                        "lyrical": True,
                         "limit": len(tracks),
                         "playlist_name": name,
                         "playlist_description": description,
@@ -412,12 +454,12 @@ def create_playlist_block(vibe: str):
                     }
                     res = api_post("/recommend-and-create", payload)
                     url = res.get("url")
-                    st.success(f"Playlist created with {res.get('created', 0)} tracks.")
+                    st.success(f"✅ Playlist created with {res.get('created', 0)} tracks!")
                     if url:
-                        st.link_button("Open playlist", url)
+                        st.link_button("🎧 Open in Spotify", url)
                 else:
                     if not selected:
-                        st.warning("No tracks selected.")
+                        st.warning("⚠️ No tracks selected.")
                         return
                     payload = {
                         "spotify_user_id": st.session_state.spotify_user_id,
@@ -428,11 +470,11 @@ def create_playlist_block(vibe: str):
                     }
                     res = api_post("/playlist", payload)
                     url = res.get("url")
-                    st.success("Playlist created from your selections.")
+                    st.success("✅ Playlist created from your selections!")
                     if url:
-                        st.link_button("Open playlist", url)
+                        st.link_button("🎧 Open in Spotify", url)
         except Exception as e:
-            st.error(f"Playlist creation failed: {e}")
+            st.error(f"❌ Playlist creation failed: {e}")
 
 # ------------------ Main App ------------------
 
@@ -443,7 +485,7 @@ def main():
         if ensure_logged_in():
             st.markdown("<span class='ok'>✅ Spotify connected.</span>", unsafe_allow_html=True)
         else:
-            st.stop()  # Show only login if not connected
+            st.stop()
 
     vibe, lyrical, limit, market = vibe_controls()
     recommend_action(vibe, lyrical, limit, market)
