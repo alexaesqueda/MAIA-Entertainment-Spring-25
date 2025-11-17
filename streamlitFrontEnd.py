@@ -508,10 +508,11 @@ def create_playlist_block(vibe: str):
 
 def main():
     header()
-
-    with st.container(border=True):
-        if not ensure_logged_in():
+   if not ensure_logged_in():
            st.stop() 
+
+    # with st.container(border=True):
+        
            # st.markdown("<span class='ok'>✅ Spotify connected.</span>", unsafe_allow_html=True)
         # else:
             
