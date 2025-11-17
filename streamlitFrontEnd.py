@@ -127,7 +127,7 @@ st.markdown(
       
       /* Captions - more visible */
       .stCaption, caption, small {
-        color: #6b7280 !important;
+        color: #8b94a6 !important;
         font-weight: 500;
       }
       
@@ -166,14 +166,14 @@ st.markdown(
       
       /* Input labels - darker for readability */
       .stTextInput>label, .stTextArea>label, .stSelectbox>label, .stSlider>label {
-        color: #1f2937 !important;
+        color: #5b6b82 !important;
         font-weight: 600 !important;
         font-size: 0.95rem !important;
       }
       
       /* Toggle labels */
       .stCheckbox>label, [data-testid="stWidgetLabel"] {
-        color: #374151 !important;
+        color: #5b6b82 !important;
         font-weight: 600 !important;
       }
     </style>
