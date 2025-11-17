@@ -263,7 +263,7 @@ def ensure_logged_in():
            <h2 style='color: white' !important; margin-bottom:16px !important; font-weight:800 !important; margin-top:0 !important; font-size: 2rem !important; text-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;'>
                🎵 Welcome to Vibe Music!
            </h2>
-           <p style='font-size:1.1rem !important; color = white !important; font-weight:500 !important; margin-bottom:32px !important; text-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;'>
+           <p style='font-size:1.1rem !important; color: white !important; font-weight:500 !important; margin-bottom:32px !important; text-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;'>
                Connect your Spotify account to discover AI-powered music recommendations<br>
                tailored perfectly to your mood.
            </p>
