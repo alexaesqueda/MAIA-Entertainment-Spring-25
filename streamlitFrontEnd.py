@@ -37,6 +37,7 @@ st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
 
 # ------------------ Complete Styling ------------------
 st.markdown(
+    """
     <style>
       /* PRIMARY ACTION BUTTONS - High contrast */
       .stButton>button[kind="primary"] {
@@ -159,6 +160,7 @@ st.markdown(
         font-weight: 600 !important;
       }
     </style>
+    """,
     unsafe_allow_html=True,
 )
 
@@ -224,7 +226,7 @@ def ensure_logged_in():
 
     # Show login prompt
     st.markdown(
-        "
+        """
         <div style='text-align:center; padding:60px 40px; background:white; 
         border-radius:24px; border:3px solid #667eea; margin:40px 0;
         box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);'>
@@ -236,6 +238,7 @@ def ensure_logged_in():
                 tailored perfectly to your mood.
             </p>
         </div>
+        """,
         unsafe_allow_html=True
     )
     
