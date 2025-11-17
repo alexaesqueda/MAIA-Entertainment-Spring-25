@@ -233,16 +233,29 @@ def fetch_vibes():
 # ------------------ UI Blocks ------------------
 
 def header():
-    left, right = st.columns([0.8, 0.2])
+    left, right = st.columns([0.7, 0.3])
     with left:
         st.title(PAGE_TITLE)
-        st.caption("AI‑driven Spotify recommendations by vibe. Build the perfect playlist in seconds.")
+        st.markdown(
+            "<p style='font-size:1.2rem; color:#6b7280; margin-top:-10px;'>"
+            "✨ AI‑driven Spotify recommendations by vibe. Build the perfect playlist in seconds.</p>",
+            unsafe_allow_html=True
+        )
     with right:
         if st.session_state.spotify_user_id:
             st.markdown(
-                f"<div class='pill'>Connected</div><div class='subtle'>User ID:</div><b>{st.session_state.spotify_user_id}</b>",
+                f"""
+                <div style='text-align:right; padding:20px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                border-radius:16px; color:white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);'>
+                    <div style='font-size:0.9rem; opacity:0.9;'>🎧 Connected</div>
+                    <div style='font-weight:700; font-size:1.1rem; margin-top:4px;'>{st.session_state.spotify_user_id}</div>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
+    
+    # Add visual divider
+    st.markdown("<div style='height:2px; background:linear-gradient(90deg, transparent, #667eea, transparent); margin:2rem 0;'></div>", unsafe_allow_html=True)
     
     # Add visual divider
     st.markdown("<div style='height:2px; background:linear-gradient(90deg, transparent, #667eea, transparent); margin:2rem 0;'></div>", unsafe_allow_html=True)
