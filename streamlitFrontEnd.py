@@ -257,8 +257,8 @@ def ensure_logged_in():
     st.markdown(
        """
        <div style='text-align:center; padding:60px 40px; 
-       background: linear-gradient(135deg, #065f46 0%, #047857 100%);
-       border-radius:24px; border:3px solid #059669; margin:40px 0;
+       background: linear-gradient(135deg, #044cbf 0%, #047857 100%);
+       border-radius:24px; border:3px solid #033482; margin:40px 0;
        box-shadow: 0 10px 30px rgba(5, 150, 105, 0.3);'>
            <h2 style='color: white' !important; margin-bottom:16px !important; font-weight:800 !important; margin-top:0 !important; font-size: 2rem !important; text-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;'>
                🎵 Welcome to Vibe Music!
