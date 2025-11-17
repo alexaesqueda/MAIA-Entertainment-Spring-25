@@ -36,19 +36,6 @@ PAGE_ICON = "🎵"
 st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
 
 # ------------------ Complete Styling ------------------
-# Just this small style block to override global purple
-# st.markdown(
-#     """
-#     <style>
-#       div[style*="#065f46"] h2,
-#       div[style*="#065f46"] p {
-#         color: white !important;
-#       }
-#     </style>
-#     """,
-#     unsafe_allow_html=True,
-# )
-
 
 st.markdown(
     """
@@ -257,7 +244,7 @@ def ensure_logged_in():
     st.markdown(
        """
        <div style='text-align:center; padding:60px 40px; 
-       background: linear-gradient(135deg, #044cbf 0%, #5048bd 100%);
+       background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
        border-radius:24px; border:3px solid #033482; margin:40px 0;
        box-shadow: 0 10px 30px rgba(5, 150, 105, 0.3);'>
            <h2 style='color: white' !important; margin-bottom:16px !important; font-weight:800 !important; margin-top:0 !important; font-size: 2rem !important; text-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;'>
