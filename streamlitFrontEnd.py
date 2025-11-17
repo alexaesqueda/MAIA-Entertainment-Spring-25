@@ -30,9 +30,14 @@ from dotenv import load_dotenv
 # ------------------ Config ------------------
 load_dotenv(override=True)
 BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "https://maia-entertainment-spring-25.onrender.com").rstrip("/")
+# Navigate to your project folder first
+cd /path/to/your/project/folder
+
+# Copy the image from Downloads to your project
+cp ~/Downloads/stanzalogo.png .
 git add stanzalogo.png
-PAGE_TITLE = stanzalogo.png
-#PAGE_TITLE = "Stanza"
+#PAGE_TITLE = stanzalogo.png
+PAGE_TITLE = "Stanza"
 PAGE_ICON = "🎵"
 
 st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
@@ -309,19 +314,30 @@ def fetch_vibes():
 
 # ------------------ UI Blocks ------------------
 
+# def header():
+#     # Center the title and tagline
+#     st.markdown(
+#         f"""
+#         <h1 style='text-align:center; font-size:3rem; font-weight:800; margin-bottom:0.5rem;'>
+#             {PAGE_TITLE}
+#         </h1>
+#         <p style='font-size:1.2rem; color:#6b7280; text-align:center; margin-top:-10px;'>
+#             ✨ AI‑driven Spotify recommendations by vibe. Build the perfect playlist in seconds.
+#         </p>
+#         """,
+#         unsafe_allow_html=True
+#     )
+
 def header():
-    # Center the title and tagline
-    st.markdown(
-        f"""
-        <h1 style='text-align:center; font-size:3rem; font-weight:800; margin-bottom:0.5rem;'>
-            {PAGE_TITLE}
-        </h1>
-        <p style='font-size:1.2rem; color:#6b7280; text-align:center; margin-top:-10px;'>
-            ✨ AI‑driven Spotify recommendations by vibe. Build the perfect playlist in seconds.
-        </p>
-        """,
-        unsafe_allow_html=True
-    )
+    # Display logo image
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image("stanzalogo.png", use_container_width=False, width=300)
+        st.markdown(
+            "<p style='font-size:1.2rem; color:#6b7280; text-align:center; margin-top:0;'>"
+            "✨ AI‑driven Spotify recommendations by vibe. Build the perfect playlist in seconds.</p>",
+            unsafe_allow_html=True
+        )
     
     # Connected status box (centered below)
     if st.session_state.spotify_user_id:
