@@ -265,29 +265,29 @@ def ensure_logged_in():
         
         # Button code moved INSIDE the try block
         col1, col2, col3 = st.columns([1, 2, 1])
-         with col2:
-             st.markdown(
-                 f"""
-                 <a href="{auth_url}" target="_self" style="
-                     display: block;
-                     text-decoration: none;
-                     text-align: center;
-                     padding: 0.75rem 2rem;
-                     border-radius: 16px;
-                     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                     color: white;
-                     font-weight: 700;
-                     font-size: 1.1rem;
-                     box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
-                     transition: all 0.3s ease;
-                 ">
-                     <img src="https://m.media-amazon.com/images/I/51rttY7a+9L.png" 
-                          style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;">
-                     Connect with Spotify
-                 </a>
-                 """,
-                 unsafe_allow_html=True
-             )
+   with col2:
+       st.markdown(
+           f"""
+           <a href="{auth_url}" target="_self" style="
+               display: block;
+               text-decoration: none;
+               text-align: center;
+               padding: 0.75rem 2rem;
+               border-radius: 16px;
+               background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+               color: white;
+               font-weight: 700;
+               font-size: 1.1rem;
+               box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+               transition: all 0.3s ease;
+           ">
+               <img src="https://m.media-amazon.com/images/I/51rttY7a+9L.png" 
+                    style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;">
+               Connect with Spotify
+           </a>
+           """,
+           unsafe_allow_html=True
+       )
             
     except Exception as e:
         st.error(f"❌ Unable to get login URL from backend: {e}")
