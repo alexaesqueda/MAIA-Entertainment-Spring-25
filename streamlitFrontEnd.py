@@ -282,7 +282,7 @@ def ensure_logged_in():
                      transition: all 0.3s ease;
                  ">
                      <img src="https://m.media-amazon.com/images/I/51rttY7a+9L.png" 
-                          style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;">
+                          style="width: 30px; height: 30px; vertical-align: middle; margin-right: 8px;">
                      Connect with Spotify
                  </a>
                  """,
