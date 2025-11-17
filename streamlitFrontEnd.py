@@ -127,7 +127,7 @@ st.markdown(
       .main p:not([style*="color: white"]), 
       .stMarkdown, 
       label {
-        color: #374151 !important;
+        color: #ffffff !important;
         font-size: 1rem;
       }
       
