@@ -283,7 +283,7 @@ def ensure_logged_in():
                  ">
                      <img src="https://m.media-amazon.com/images/I/51rttY7a+9L.png" 
                           style="width: 23px; height: 23px; vertical-align: middle; margin-right: 8px;">
-                     Connect with Spotify
+                     Connect
                  </a>
                  """,
                  unsafe_allow_html=True
