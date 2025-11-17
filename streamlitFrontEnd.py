@@ -510,10 +510,11 @@ def main():
     header()
 
     with st.container(border=True):
-        if ensure_logged_in():
-            st.markdown("<span class='ok'>✅ Spotify connected.</span>", unsafe_allow_html=True)
-        else:
-            st.stop()
+        if not ensure_logged_in():
+           st.stop() 
+           # st.markdown("<span class='ok'>✅ Spotify connected.</span>", unsafe_allow_html=True)
+        # else:
+            
 
     vibe, lyrical, limit, market = vibe_controls()
     recommend_action(vibe, lyrical, limit, market)
