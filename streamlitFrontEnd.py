@@ -234,7 +234,7 @@ def ensure_logged_in():
                 if data.get("ok") and data.get("spotify_user_id"):
                     st.session_state.spotify_user_id = data["spotify_user_id"]
                     st.query_params.clear()
-                    st.success("✅ You're connected to Spotify!")
+                    st.success("✅ You're  to Spotify!")
                     time.sleep(1)
                     st.rerun()
                     return True
@@ -338,12 +338,12 @@ def header():
 #             unsafe_allow_html=True
 #         )
     
-    # Connected status box (centered below)
+    #  status box (centered below)
     if st.session_state.spotify_user_id:
         st.markdown(
             f"""
             <div style='display:block; width:fit-content; margin:20px auto;
-            text-align:right; padding:10px 14px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            text-align:center; padding:10px 14px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
             border-radius:12px; color:white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);'>
                 <div style='font-size:0.8rem; opacity:0.9; white-space:nowrap;'>🎧 Connected</div>
                 <div style='font-weight:700; font-size:0.95rem; margin-top:2px; white-space:nowrap;'>{st.session_state.spotify_user_id}</div>
