@@ -285,7 +285,7 @@ def ensure_logged_in():
                      text-decoration: none;
                      text-align: center;
                      padding: 0.75rem 2rem;
-                     border-radius: 16px;
+                     border-radius: 32px;
                      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
                      color: white;
                      font-weight: 700;
