@@ -36,11 +36,11 @@ BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "https://maia-entertainment-spr
 # # Copy the image from Downloads to your project
 # cd /mount/src/maia-entertainment-spring-25/
 # git add stanzalogo.png
-PAGE_TITLE = [Alt text](stanzalogo.png)
-#PAGE_TITLE = "‎‎ ‎ ‎ ‎ Stanza"
+#PAGE_TITLE = [Alt text](stanzalogo.png)
+PAGE_TITLE = "‎‎ ‎ ‎ ‎ Stanza"
 PAGE_ICON = "🎵"
 
-st.set_page_config(page_title="Stanza", page_icon=PAGE_ICON, layout="wide")
+st.set_page_config(page_title=st.image("stanzalogo.png", width=300), page_icon=PAGE_ICON, layout="wide")
 
 # ------------------ Complete Styling ------------------
 
