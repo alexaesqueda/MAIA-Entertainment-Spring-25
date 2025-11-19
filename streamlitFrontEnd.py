@@ -357,7 +357,7 @@ def header():
 
 
 def vibe_controls():
-    st.subheader("1) Choose your vibe")
+    st.subheader("Choose your vibe")
     if not st.session_state.vibes:
         vibes, details = fetch_vibes()
         st.session_state.vibes = vibes
@@ -384,7 +384,7 @@ def vibe_controls():
 
 
 def recommend_action(vibe: str, lyrical: bool, limit: int, market: str | None):
-    st.subheader("2) Get recommendations")
+    st.subheader("Get recommendations")
 
     btn = st.button("✨ RECOMMEND TRACKS", type="primary", use_container_width=True)
     if btn:
@@ -414,7 +414,7 @@ def tracks_table():
     if not tracks:
         st.info("🎵 No tracks yet. Click **Recommend tracks** above.")
         return
-    st.subheader("3) Review & pick tracks")
+    st.subheader("Review & pick tracks")
     st.caption("Uncheck any songs you don't want in the playlist. Preview 30s samples when available.")
 
     # Bulk selectors
@@ -477,7 +477,7 @@ def create_playlist_block(vibe: str):
     tracks = st.session_state.rec_tracks or []
     selected = list(st.session_state.selected_uris)
 
-    st.subheader("4) Create playlist")
+    st.subheader("Create playlist")
 
     default_name = f"{vibe.capitalize()} • {time.strftime('%b %d, %Y')}"
     name = st.text_input("Playlist name", value=default_name)
