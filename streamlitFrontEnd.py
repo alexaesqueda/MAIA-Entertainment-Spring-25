@@ -333,7 +333,7 @@ def fetch_vibes():
 #         unsafe_allow_html=True
 #     )
 
-   def header():
+      def header():
        # Create columns for title and connected status
        left, right = st.columns([0.75, 0.25])
        
