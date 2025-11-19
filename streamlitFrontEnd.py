@@ -319,7 +319,46 @@ def fetch_vibes():
 
 # ------------------ UI Blocks ------------------
 
-# def header():
+def header():
+    # Create columns for title and connected status
+    left, right = st.columns([0.75, 0.25])
+    
+    with left:
+        # Center the title and tagline
+        st.markdown(
+            f"""
+            <h1 style='text-align:center; font-size:3rem; font-weight:800; margin-bottom:0.5rem;'>
+                {PAGE_TITLE}
+            </h1>
+            <p style='font-size:1.2rem; color:#abb3c4; text-align:center; margin-top:-10px;'>
+                ✨ AI‑driven Spotify recommendations by vibe. Build the perfect playlist in seconds.
+            </p>
+            """,
+            unsafe_allow_html=True
+        )
+    
+    with right:
+        # Connected status box (top right)
+        if st.session_state.spotify_user_id:
+            st.markdown(
+                f"""
+                <div style='display:inline-block; width:fit-content; margin-left:auto; float:right;
+                text-align:center; padding:10px 14px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                border-radius:12px; color:white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); margin-top:20px;'>
+                    <div style='font-size:0.8rem; opacity:0.9; white-space:nowrap;'>🎧 Connected</div>
+                    <div style='font-weight:700; font-size:0.95rem; margin-top:2px; white-space:nowrap;'>{st.session_state.spotify_user_id}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+    
+    # Divider
+    st.markdown("<div style='height:2px; background:linear-gradient(90deg, transparent, #667eea, transparent); margin:2rem 0;'></div>", unsafe_allow_html=True)
+
+
+
+
+
 #     # Center the title and tagline
 #     st.markdown(
 #         f"""
@@ -333,41 +372,6 @@ def fetch_vibes():
 #         unsafe_allow_html=True
 #     )
 
-      def header():
-          # Create columns for title and connected status
-          left, right = st.columns([0.75, 0.25])
-          
-          with left:
-              # Center the title and tagline
-              st.markdown(
-                  f"""
-                  <h1 style='text-align:center; font-size:3rem; font-weight:800; margin-bottom:0.5rem;'>
-                      {PAGE_TITLE}
-                  </h1>
-                  <p style='font-size:1.2rem; color:#abb3c4; text-align:center; margin-top:-10px;'>
-                      ✨ AI‑driven Spotify recommendations by vibe. Build the perfect playlist in seconds.
-                  </p>
-                  """,
-                  unsafe_allow_html=True
-              )
-          
-          with right:
-              # Connected status box (top right)
-              if st.session_state.spotify_user_id:
-                  st.markdown(
-                      f"""
-                      <div style='display:inline-block; width:fit-content; margin-left:auto; float:right;
-                      text-align:center; padding:10px 14px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                      border-radius:12px; color:white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); margin-top:20px;'>
-                          <div style='font-size:0.8rem; opacity:0.9; white-space:nowrap;'>🎧 Connected</div>
-                          <div style='font-weight:700; font-size:0.95rem; margin-top:2px; white-space:nowrap;'>{st.session_state.spotify_user_id}</div>
-                      </div>
-                      """,
-                      unsafe_allow_html=True,
-                  )
-       
-    # Divider
-    st.markdown("<div style='height:2px; background:linear-gradient(90deg, transparent, #667eea, transparent); margin:2rem 0;'></div>", unsafe_allow_html=True)
 
 
     
