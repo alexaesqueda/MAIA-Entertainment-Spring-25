@@ -37,7 +37,7 @@ BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "https://maia-entertainment-spr
 # cd /mount/src/maia-entertainment-spring-25/
 # git add stanzalogo.png
 #PAGE_TITLE = stanzalogo.png
-PAGE_TITLE = "‎ ‎ Stanza"
+PAGE_TITLE = "‎ ‎‎  Stanza"
 PAGE_ICON = "🎵"
 
 st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
