@@ -410,7 +410,7 @@ def recommend_action(vibe: str, lyrical: bool, limit: int, market: str | None):
 
 def tracks_table():
     tracks = st.session_state.rec_tracks or []
-    st.write(f"{len(tracks)} tracks recommended")
+    # st.write(f"{len(tracks)} tracks recommended")
     if not tracks:
         st.info("🎵 No tracks yet. Click **Recommend tracks** above.")
         return
