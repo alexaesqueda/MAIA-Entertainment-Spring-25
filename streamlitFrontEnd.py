@@ -412,7 +412,6 @@ def tracks_table():
     if not tracks:
         st.info("🎵 No tracks yet. Click **Recommend tracks** above.")
         return
-
     st.subheader("3) Review & pick tracks")
     st.caption("Uncheck any songs you don't want in the playlist. Preview 30s samples when available.")
 
@@ -549,7 +548,6 @@ def main():
 
     vibe, lyrical, limit, market = vibe_controls()
     recommend_action(vibe, lyrical, limit, market)
-    
     tracks_table()
     create_playlist_block(vibe)
 
