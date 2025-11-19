@@ -407,7 +407,6 @@ def recommend_action(vibe: str, lyrical: bool, limit: int, market: str | None):
             except Exception as e:
                 st.error(f"❌ Recommendation failed: {e}")
 
-
 def tracks_table():
     tracks = st.session_state.rec_tracks or []
     if not tracks:
@@ -550,6 +549,7 @@ def main():
 
     vibe, lyrical, limit, market = vibe_controls()
     recommend_action(vibe, lyrical, limit, market)
+    
     tracks_table()
     create_playlist_block(vibe)
 
