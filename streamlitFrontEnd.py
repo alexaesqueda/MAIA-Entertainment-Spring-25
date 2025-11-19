@@ -181,7 +181,7 @@ st.markdown(
       
       /* Input labels - darker for readability */
       .stTextInput>label, .stTextArea>label, .stSelectbox>label, .stSlider>label {
-        color: #5b6b82 !important;
+        color: #dae2ed !important;
         font-weight: 600 !important;
         font-size: 0.95rem !important;
       }
