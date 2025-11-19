@@ -40,7 +40,7 @@ BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "https://maia-entertainment-spr
 PAGE_TITLE = "‎‎ ‎ ‎ ‎ Stanza"
 PAGE_ICON = "🎵"
 
-st.set_page_config(page_title=PAGE_TITLE, width=300), page_icon=PAGE_ICON, layout="wide")
+st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
 
 # ------------------ Complete Styling ------------------
 
