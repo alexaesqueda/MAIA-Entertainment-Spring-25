@@ -407,8 +407,10 @@ def recommend_action(vibe: str, lyrical: bool, limit: int, market: str | None):
             except Exception as e:
                 st.error(f"❌ Recommendation failed: {e}")
 
+
 def tracks_table():
     tracks = st.session_state.rec_tracks or []
+    st.write(f"DEBUG: {len(tracks)} tracks in state")
     if not tracks:
         st.info("🎵 No tracks yet. Click **Recommend tracks** above.")
         return
