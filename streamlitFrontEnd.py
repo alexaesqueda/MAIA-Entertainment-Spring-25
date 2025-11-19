@@ -326,7 +326,7 @@ def header():
         <h1 style='text-align:center; font-size:3rem; font-weight:800; margin-bottom:0.5rem;'>
             {PAGE_TITLE}
         </h1>
-        <p style='font-size:1.2rem; color:#6b7280; text-align:center; margin-top:-10px;'>
+        <p style='font-size:1.2rem; color:#abb3c4; text-align:center; margin-top:-10px;'>
             ✨ AI‑driven Spotify recommendations by vibe. Build the perfect playlist in seconds.
         </p>
         """,
