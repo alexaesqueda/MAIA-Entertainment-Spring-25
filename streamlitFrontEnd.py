@@ -47,6 +47,14 @@ st.set_page_config(page_title="Stanza", page_icon=PAGE_ICON, layout="wide")
 st.markdown(
     """
     <style>
+      .stApp {
+        background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+        background-attachment: fixed;
+      }
+      
+      .main {
+        background: transparent;
+      }
       /* PRIMARY ACTION BUTTONS - High contrast */
       .stButton>button[kind="primary"] {
         border-radius: 16px;
@@ -250,21 +258,18 @@ def ensure_logged_in():
     # Show login prompt
     st.markdown(
        """
-       <div style='text-align:center; padding:60px 40px; 
-       background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
-       border-radius:24px; border:3px solid #033482; margin:40px 0;
-       box-shadow: 0 10px 30px rgba(5, 150, 105, 0.3);'>
-           <h2 style='color: white' !important; margin-bottom:16px !important; font-weight:800 !important; margin-top:0 !important; font-size: 3rem !important; text-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;'>
-               ‎ ‎ ‎ ‎ 🎵 Welcome to Your Vibe Music Recommender!
-           </h2>
-           <p style='font-size:1.1rem !important; color: white !important; font-weight:500 !important; margin-bottom:32px !important; text-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;'>
-               Connect your Spotify account to discover AI-powered music recommendations<br>
-               tailored perfectly to your mood.
-           </p>
-       </div>
-       """,
-       unsafe_allow_html=True
-      )
+      <div style='text-align:center; padding:60px 40px; margin:40px 0;'>
+          <h2 style='color: white !important; margin-bottom:16px !important; font-weight:800 !important; margin-top:0 !important; font-size: 3rem !important; text-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;'>
+              🎵 Welcome to Your Vibe Music Recommender!
+          </h2>
+          <p style='font-size:1.1rem !important; color: white !important; font-weight:500 !important; margin-bottom:32px !important; text-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;'>
+              Connect your Spotify account to discover AI-powered music recommendations<br>
+              tailored perfectly to your mood.
+          </p>
+      </div>
+      """,
+      unsafe_allow_html=True
+     )
     
     try:
         auth = api_get("/login")
