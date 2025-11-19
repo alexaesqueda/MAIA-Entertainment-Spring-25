@@ -188,7 +188,7 @@ st.markdown(
       
       /* Toggle labels */
       .stCheckbox>label, [data-testid="stWidgetLabel"] {
-        color: #5b6b82 !important;
+        color: #dae2ed !important;
         font-weight: 600 !important;
       }
     </style>
