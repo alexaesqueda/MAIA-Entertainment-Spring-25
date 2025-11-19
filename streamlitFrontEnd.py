@@ -321,7 +321,7 @@ def fetch_vibes():
 
 def header():
     # Create columns for title and connected status
-    left, right = st.columns([0.75, 0.25])
+    left_pad, center, right = st.columns([0.2, 0.6, 0.2])
     
     with left:
         # Center the title and tagline
