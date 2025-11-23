@@ -48,7 +48,9 @@ st.markdown(
     """
     <style>
       .stApp {
-        background: linear-gradient(179deg, #0f1015 10%, #5568d3, #6a3f8f 100%);
+         background: #5568D3;
+         background: radial-gradient(circle,rgba(85, 104, 211, 1) 0%, rgba(106, 63, 143, 1) 85%, rgba(15, 16, 21, 1) 100%);
+        #background: linear-gradient(179deg, #0f1015 10%, #5568d3, #6a3f8f 100%);
         background-attachment: fixed;
       }
       
