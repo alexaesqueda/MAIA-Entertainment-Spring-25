@@ -1,24 +1,7 @@
 """
-Streamlit Frontend — STANZA
+Streamlit Frontend — Vibe Music Recommender (Apple)
 =====================================================
---------------------------------------
-**CRITICAL ENV SETUP (do this once):**
---------------------------------------
-1) In your **.env** (same one your backend reads), set:
-   - `SPOTIFY_REDIRECT_URI` = the public URL of THIS Streamlit app (e.g., https://your-app.streamlit.app)
-     This must be whitelisted in your Spotify Developer Dashboard.
-   - `APP_BASE_URL` (optional, your backend already reads it)
 
-2) In this Streamlit app, set `BACKEND_BASE_URL` below, or via an env var BACKEND_BASE_URL.
-   Example: `http://127.0.0.1:8000` or your deployed FastAPI URL.
-
-3) Flow:
-   - Streamlit calls your backend `/login` to get the **Spotify authorize URL**.
-   - Spotify redirects the user back to **this Streamlit URL** with `code` and `state`.
-   - Streamlit immediately calls your backend `/callback` with those params to finish login.
-   - Backend returns `{ ok: True, spotify_user_id }`, which we store in session.
-
---------------------------------------
 Run locally:
 --------------------------------------
 $ pip install streamlit requests python-dotenv
@@ -28,9 +11,7 @@ $ streamlit run streamlit_frontend_app.py
 
 import os
 import time
-import json
 import requests
-from urllib.parse import urlencode
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -58,25 +39,22 @@ st.markdown(
 )
 
 # ------------------ Session State ------------------
-if "spotify_user_id" not in st.session_state:
-    st.session_state.spotify_user_id = None
 if "vibes" not in st.session_state:
     st.session_state.vibes = []
-if "vibe_details" not in st.session_state:
-    st.session_state.vibe_details = {}
 if "rec_tracks" not in st.session_state:
     st.session_state.rec_tracks = []
-if "selected_uris" not in st.session_state:
-    st.session_state.selected_uris = set()
+if "selected_ids" not in st.session_state:
+    st.session_state.selected_ids = set()
+
 
 # ------------------ Backend helpers ------------------
-
 def api_get(path: str, params: dict | None = None, timeout: int = 20):
     url = f"{BACKEND_BASE_URL}{path}"
     r = requests.get(url, params=params, timeout=timeout)
     if r.status_code >= 400:
         raise RuntimeError(f"GET {path} failed: {r.status_code} {r.text}")
     return r.json()
+
 
 def api_post(path: str, payload: dict, timeout: int = 30):
     url = f"{BACKEND_BASE_URL}{path}"
@@ -85,119 +63,65 @@ def api_post(path: str, payload: dict, timeout: int = 30):
         raise RuntimeError(f"POST {path} failed: {r.status_code} {r.text}")
     return r.json()
 
-# ------------------ OAuth handling ------------------
-
-def ensure_logged_in():
-    """If redirected from Spotify, finish login. Otherwise show a login button."""
-    # If we just got redirected from Spotify, the URL will contain code & state
-    qp = st.query_params
-    code = qp.get("code")
-    state = qp.get("state")
-
-    if st.session_state.spotify_user_id:
-        return True
-
-    if code and state:
-        with st.spinner("Completing Spotify sign‑in..."):
-            try:
-                data = api_get("/callback", params={"code": code, "state": state})
-                if data.get("ok") and data.get("spotify_user_id"):
-                    st.session_state.spotify_user_id = data["spotify_user_id"]
-                    # Clear query params for a clean URL
-                    st.query_params.clear()
-                    st.success("You're connected to Spotify.")
-                    return True
-                else:
-                    st.error("Login callback returned an unexpected response.")
-            except Exception as e:
-                st.error(f"Spotify sign‑in failed: {e}")
-        return False
-
-    # Otherwise we must initiate login
-    st.info("Connect your Spotify account to continue.")
-    try:
-        auth = api_get("/login")
-        auth_url = auth.get("auth_url")
-    except Exception as e:
-        st.error(f"Unable to get login URL from backend: {e}")
-        return False
-
-    st.link_button("🔐 Log in with Spotify", auth_url, use_container_width=True)
-    return False
 
 # ------------------ Data fetchers ------------------
-
 @st.cache_data(show_spinner=False, ttl=300)
 def fetch_vibes():
     try:
         vib = api_get("/vibes")
-        return vib.get("vibes", []), vib.get("details", {})
+        return vib.get("vibes", [])
     except Exception:
-        # Fallback in case backend isn't ready
-        return ["mellow", "energetic", "sad", "happy", "focus", "epic"], {}
+        # Fallback if backend isn't ready
+        return ["focus", "creative", "mellow", "energetic"]
+
 
 # ------------------ UI Blocks ------------------
-
 def header():
     left, right = st.columns([0.8, 0.2])
     with left:
         st.title(PAGE_TITLE)
-        st.caption("AI‑driven Spotify recommendations by vibe. Build the perfect playlist in seconds.")
+        st.caption("Student-driven Apple Music recommendations by vibe / task. Built from real audio features.")
     with right:
-        if st.session_state.spotify_user_id:
-            st.markdown(
-                f"<div class='pill'>Connected</div><div class='subtle'>User ID:</div><b>{st.session_state.spotify_user_id}</b>",
-                unsafe_allow_html=True,
-            )
+        st.markdown(
+            "<div class='pill'>Backend</div>"
+            f"<div class='subtle'>URL:</div><code>{BACKEND_BASE_URL}</code>",
+            unsafe_allow_html=True,
+        )
 
 
 def vibe_controls():
-    st.subheader("1) Choose your vibe")
+    st.subheader("1) Choose your vibe / task")
+
     if not st.session_state.vibes:
-        vibes, details = fetch_vibes()
-        st.session_state.vibes = vibes
-        st.session_state.vibe_details = details
+        st.session_state.vibes = fetch_vibes()
 
-    c1, c2, c3, c4 = st.columns([0.35, 0.25, 0.2, 0.2])
-    with c1:
-        vibe = st.selectbox("Vibe", options=st.session_state.vibes, index=0, help="Pick the overall mood.")
-    with c2:
-        lyrical = st.toggle("Lyrical (vocals)", value=True, help="Turn off for instrumental / non‑lyrical tracks.")
-    with c3:
-        limit = st.slider("Track count", 5, 50, 25, step=1)
-    with c4:
-        market = st.text_input("Market", value="US", help="Optional e.g. US, GB, AU; leave blank to let Spotify decide.")
+    vibe = st.selectbox(
+        "Vibe",
+        options=st.session_state.vibes,
+        index=0 if st.session_state.vibes else None,
+        help="Pick the vibe or task (e.g., focus, creative, mellow).",
+    )
+    limit = st.slider("Track count", 5, 50, 25, step=1)
+    country = st.text_input("Apple Music country code", value="us", help="e.g. us, gb, in, au")
 
-    # Show tiny spec for the vibe if available
-    if st.session_state.vibe_details.get(vibe):
-        spec = st.session_state.vibe_details[vibe]
-        st.caption(
-            f"Energy: {spec.get('target_energy')}, Valence: {spec.get('target_valence')}, Tempo: {spec.get('min_tempo')}–{spec.get('max_tempo')}"
-        )
-
-    return vibe, lyrical, limit, (market or None)
+    return vibe, limit, (country or "us")
 
 
-def recommend_action(vibe: str, lyrical: bool, limit: int, market: str | None):
+def recommend_action(vibe: str, limit: int, country: str):
     st.subheader("2) Get recommendations")
 
     btn = st.button("✨ Recommend tracks", type="primary", use_container_width=True)
     if btn:
-        if not st.session_state.spotify_user_id:
-            st.warning("Please connect Spotify first.")
-            return
         with st.spinner("Fetching recommendations..."):
             try:
                 payload = {
-                    "spotify_user_id": st.session_state.spotify_user_id,
                     "vibe": vibe,
-                    "lyrical": lyrical,
                     "limit": limit,
-                    "market": market,
+                    "country": country,
                 }
                 data = api_post("/recommend", payload)
                 st.session_state.rec_tracks = data.get("tracks", [])
-                st.session_state.selected_uris = set(t.get("uri") for t in st.session_state.rec_tracks)
+                st.session_state.selected_ids = set(t.get("id") for t in st.session_state.rec_tracks)
                 st.success(f"Got {len(st.session_state.rec_tracks)} tracks.")
             except Exception as e:
                 st.error(f"Recommendation failed: {e}")
@@ -211,20 +135,20 @@ def tracks_table():
 
     st.subheader("3) Review & pick tracks")
 
-    st.caption("Uncheck any songs you don't want in the playlist. You can preview 30s samples when available.")
+    st.caption("Uncheck any songs you don't want. You can listen to 30s previews and open tracks in Apple Music.")
 
     # Bulk selectors
     c1, c2, c3 = st.columns([0.2, 0.2, 0.6])
     with c1:
         if st.button("Select all"):
-            st.session_state.selected_uris = set(t.get("uri") for t in tracks)
+            st.session_state.selected_ids = set(t.get("id") for t in tracks)
     with c2:
         if st.button("Clear all"):
-            st.session_state.selected_uris = set()
+            st.session_state.selected_ids = set()
 
-    # Render as cards for readability
+    # Render as cards
     for t in tracks:
-        uri = t.get("uri")
+        tid = t.get("id")
         name = t.get("name")
         artists = ", ".join(t.get("artists", []))
         preview = t.get("preview_url")
@@ -232,112 +156,73 @@ def tracks_table():
         f = t.get("features", {})
         col1, col2 = st.columns([0.05, 0.95])
         with col1:
-            checked = uri in st.session_state.selected_uris
-            new_val = st.checkbox("", value=checked, key=f"chk_{uri}")
+            checked = tid in st.session_state.selected_ids
+            new_val = st.checkbox("", value=checked, key=f"chk_{tid}")
             if new_val:
-                st.session_state.selected_uris.add(uri)
+                st.session_state.selected_ids.add(tid)
             else:
-                st.session_state.selected_uris.discard(uri)
+                st.session_state.selected_ids.discard(tid)
         with col2:
-            st.markdown(f"<div class='card'><b>{name}</b> — {artists}  ", unsafe_allow_html=True)
+            st.markdown(f"<div class='card'><b>{name}</b> — {artists}", unsafe_allow_html=True)
+            # show a tiny summary of numeric features
             metrics = [
-                ("Energy", f.get("energy")),
-                ("Valence", f.get("valence")),
-                ("Danceability", f.get("danceability")),
                 ("Tempo", f.get("tempo")),
-                ("Instrumentalness", f.get("instrumentalness")),
+                ("Energy", f.get("energy")),
+                ("ZCR", f.get("zcr")),
             ]
             st.caption(
                 "  •  ".join(
-                    [f"{m}: {v:.2f}" if isinstance(v, (int, float)) else f"{m}: —" for m, v in metrics]
+                    [f"{m}: {v:.3f}" if isinstance(v, (int, float)) else f"{m}: —" for m, v in metrics]
                 )
             )
             if preview:
                 st.audio(preview, format="audio/mp3")
             tiny = []
             if link:
-                tiny.append(f"<a href='{link}' target='_blank'>Open in Spotify</a>")
-            tiny.append(f"URI: <code>{uri}</code>")
+                tiny.append(f"<a href='{link}' target='_blank'>Open in Apple Music</a>")
+            tiny.append(f"Track ID: <code>{tid}</code>")
             st.markdown(" \\| ".join(tiny), unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
 
-def create_playlist_block(vibe: str):
+def create_playlist_block():
+    """
+    For now, we can't auto-create Apple Music playlists via public API,
+    so we just summarize the selected tracks and provide links.
+    """
     tracks = st.session_state.rec_tracks or []
-    selected = [u for u in st.session_state.selected_uris]
+    selected_ids = st.session_state.selected_ids
 
-    st.subheader("4) Create playlist")
+    st.subheader("4) Use your playlist")
 
-    default_name = f"{vibe.capitalize()} • {time.strftime('%b %d, %Y')}"
-    name = st.text_input("Playlist name", value=default_name)
-    description = st.text_area("Description", value=f"Auto‑generated {vibe} playlist")
-    colA, colB, colC = st.columns([0.25, 0.25, 0.5])
-    with colA:
-        public = st.toggle("Public playlist", value=False)
-    with colB:
-        use_all = st.toggle("Use all shown tracks", value=True)
+    if not tracks:
+        st.info("No tracks to show.")
+        return
 
-    create = st.button("🪄 Create playlist in Spotify", type="primary", use_container_width=True)
+    selected = [t for t in tracks if t.get("id") in selected_ids]
+    st.write(f"You have selected **{len(selected)}** tracks.")
 
-    if create:
-        if not st.session_state.spotify_user_id:
-            st.warning("Please connect Spotify first.")
-            return
-        try:
-            with st.spinner("Creating your playlist..."):
-                if use_all:
-                    # Use backend convenience endpoint (recommend + create in one go)
-                    if not tracks:
-                        st.warning("Please fetch recommendations first.")
-                        return
-                    payload = {
-                        "spotify_user_id": st.session_state.spotify_user_id,
-                        "vibe": vibe,
-                        "lyrical": True,  # Not strictly needed here; keeping explicit is clearer if you wire it up
-                        "limit": len(tracks),
-                        "playlist_name": name,
-                        "playlist_description": description,
-                        "public": public,
-                    }
-                    res = api_post("/recommend-and-create", payload)
-                    url = res.get("url")
-                    st.success(f"Playlist created with {res.get('created', 0)} tracks.")
-                    if url:
-                        st.link_button("Open playlist", url)
-                else:
-                    if not selected:
-                        st.warning("No tracks selected.")
-                        return
-                    payload = {
-                        "spotify_user_id": st.session_state.spotify_user_id,
-                        "name": name,
-                        "description": description,
-                        "public": public,
-                        "track_uris": selected,
-                    }
-                    res = api_post("/playlist", payload)
-                    url = res.get("url")
-                    st.success("Playlist created from your selections.")
-                    if url:
-                        st.link_button("Open playlist", url)
-        except Exception as e:
-            st.error(f"Playlist creation failed: {e}")
+    if not selected:
+        return
+
+    with st.expander("Show selected track links"):
+        for t in selected:
+            name = t.get("name")
+            artists = ", ".join(t.get("artists", []))
+            link = t.get("external_url")
+            if link:
+                st.markdown(f"- {name} — {artists} — [Open in Apple Music]({link})")
+            else:
+                st.markdown(f"- {name} — {artists}")
+
 
 # ------------------ Main App ------------------
-
 def main():
     header()
-
-    with st.container(border=True):
-        if ensure_logged_in():
-            st.markdown("<span class='ok'>✅ Spotify connected.</span>", unsafe_allow_html=True)
-        else:
-            st.stop()  # Show only login if not connected
-
-    vibe, lyrical, limit, market = vibe_controls()
-    recommend_action(vibe, lyrical, limit, market)
+    vibe, limit, country = vibe_controls()
+    recommend_action(vibe, limit, country)
     tracks_table()
-    create_playlist_block(vibe)
+    create_playlist_block()
 
 
 if __name__ == "__main__":
