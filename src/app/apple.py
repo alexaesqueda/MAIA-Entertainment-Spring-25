@@ -1,177 +1,112 @@
-# src/app/apple.py
+# src/app/apple_music.py
 
-from typing import Dict, List, Any, Optional
+from __future__ import annotations
+
+import math
+from typing import List, Dict, Any, Optional
 
 import httpx
-import numpy as np
 from pydantic import BaseModel
 
-from .audio_features import extract_features_from_url
-from .student_tracks import (
-    get_reference_features_for_task,
-    get_student_tracks_for_task,
+from src.app.student_vibes import (
+    extract_features_from_audio_bytes,
+    get_reference_features_for_vibe,
 )
+
 
 ITUNES_SEARCH_URL = "https://itunes.apple.com/search"
 
 
 class TrackOut(BaseModel):
-    """
-    Track representation returned to the frontend (Apple tracks).
-    """
     id: str
-    uri: str
     name: str
     artists: List[str]
-    preview_url: Optional[str] = None
-    external_url: Optional[str] = None
+    preview_url: Optional[str]
+    external_url: Optional[str]
     features: Dict[str, Any]
 
 
-class StudentTrackOut(BaseModel):
+def search_apple_candidates_for_vibe(
+    vibe: str,
+    country: str = "us",
+    limit: int = 50,
+) -> List[Dict[str, Any]]:
     """
-    Representation of a student musician track (reference).
-    """
-    id: str
-    name: str
-    artist: str
-    task: str
-    audio_url: str
-    features: Optional[Dict[str, Any]] = None
-
-
-def search_itunes_tracks(term: str, limit: int = 80, country: str = "US") -> List[Dict[str, Any]]:
-    """
-    Call iTunes Search API to get candidate tracks.
-    Docs: https://itunes.apple.com/search
+    Use iTunes Search API to pull a rough candidate set of songs for this vibe.
+    We'll refine later based on audio similarity.
     """
     params = {
-        "term": term,
+        "term": vibe,
         "media": "music",
         "entity": "song",
-        "limit": limit,
         "country": country,
+        "limit": limit,
     }
-    with httpx.Client(timeout=15.0) as client:
+    with httpx.Client(timeout=20.0) as client:
         r = client.get(ITUNES_SEARCH_URL, params=params)
         r.raise_for_status()
         data = r.json()
-    results = data.get("results", [])
-    print(f"[iTunes] Search term='{term}', country='{country}', results={len(results)}")
-    return results
+        return data.get("results", [])
 
 
-def _vectorize(feats: Dict[str, Any]) -> np.ndarray:
-    """
-    Convert features dict into numeric vector for distance.
-    """
-    return np.array(
-        [
-            float(feats.get("tempo", 0.0)),
-            float(feats.get("energy", 0.0)),
-            float(feats.get("valence", 0.0)),
-            float(feats.get("acousticness", 0.0)),
-            float(feats.get("danceability", 0.0)),
-            float(feats.get("instrumentalness", 0.0)),
-        ],
-        dtype=float,
-    )
-
-
-def _similarity_score(ref_feats: Dict[str, Any], cand_feats: Dict[str, Any]) -> float:
-    """
-    Higher score = more similar (negative Euclidean distance).
-    """
-    ref_vec = _vectorize(ref_feats)
-    cand_vec = _vectorize(cand_feats)
-    dist = np.linalg.norm(ref_vec - cand_vec)
-    return -float(dist)
-
-
-def recommend_from_task(
-    task: str,
+def recommend_tracks_for_vibe(
+    vibe: str,
     limit: int = 25,
-    market: Optional[str] = "US",
-) -> Dict[str, Any]:
+    country: str = "us",
+) -> List[TrackOut]:
     """
-    Main pipeline:
-    1) Get reference features from student tracks for the task.
-    2) iTunes Search for candidates by keyword.
-    3) Extract features from each candidate's previewUrl.
-    4) Rank by similarity to reference.
-    5) Return reference + top-N candidates.
+    Main recommendation function:
+      1) Get reference features from student tracks for this vibe.
+      2) Search Apple Music/iTunes for candidates.
+      3) For each candidate with a previewUrl, download audio and compute features.
+      4) Rank candidates by distance to reference features.
     """
-    task = task.lower()
+    ref = get_reference_features_for_vibe(vibe)
+    if not ref:
+        raise ValueError(f"No reference features available for vibe '{vibe}'")
 
-    ref_feats = get_reference_features_for_task(task)
-    if not ref_feats:
-        raise ValueError(f"No valid student reference features for task '{task}'")
+    candidates = search_apple_candidates_for_vibe(vibe, country=country, limit=80)
 
-    # Map tasks to search terms (tweak as you like)
-    default_terms = {
-        "productivity": "focus study lofi",
-        "creative": "creative electronic experimental",
-        "relax": "chill relax ambient",
-    }
-    search_term = default_terms.get(task, task + " music")
+    scored: List[tuple[float, TrackOut]] = []
 
-    country = (market or "US").upper()
-    raw_results = search_itunes_tracks(search_term, limit=80, country=country)
+    keys = list(ref.keys())
 
-    # Build candidate list with features
-    candidates: List[TrackOut] = []
-    for r in raw_results:
-        preview = r.get("previewUrl")
-        if not preview:
-            continue
+    def distance(feat: Dict[str, float]) -> float:
+        # Euclidean distance in feature space
+        s = 0.0
+        for k in keys:
+            s += (float(feat.get(k, 0.0)) - float(ref.get(k, 0.0))) ** 2
+        return math.sqrt(s)
 
-        feats = extract_features_from_url(preview)
-        if not feats:
-            continue
+    with httpx.Client(timeout=30.0) as client:
+        for item in candidates:
+            preview_url = item.get("previewUrl")
+            if not preview_url:
+                continue
 
-        track = TrackOut(
-            id=str(r.get("trackId")),
-            uri=r.get("trackViewUrl") or "",
-            name=r.get("trackName") or "Unknown",
-            artists=[r.get("artistName") or "Unknown"],
-            preview_url=preview,
-            external_url=r.get("trackViewUrl"),
-            features=feats,
-        )
-        candidates.append(track)
+            try:
+                audio_resp = client.get(preview_url)
+                audio_resp.raise_for_status()
+                feats = extract_features_from_audio_bytes(audio_resp.content)
+            except Exception as e:
+                print(f"[AppleReco] Failed preview for track {item.get('trackId')}: {e}")
+                continue
 
-    print(f"[Recommender] Task='{task}', candidates with features: {len(candidates)}")
+            d = distance(feats)
+            t = TrackOut(
+                id=str(item.get("trackId")),
+                name=item.get("trackName", "Unknown title"),
+                artists=[item.get("artistName", "Unknown artist")],
+                preview_url=preview_url,
+                external_url=item.get("trackViewUrl"),
+                features=feats,
+            )
+            scored.append((d, t))
 
-    if not candidates:
-        return {
-            "task": task,
-            "reference_track": None,
-            "count": 0,
-            "tracks": [],
-        }
+    # Sort by ascending distance (closest = most similar)
+    scored.sort(key=lambda x: x[0])
 
-    # Rank by similarity
-    candidates.sort(key=lambda t: _similarity_score(ref_feats, t.features), reverse=True)
-    top_tracks = candidates[:limit]
-
-    # Choose a student reference track for display
-    student_tracks = get_student_tracks_for_task(task)
-    ref_student = student_tracks[0] if student_tracks else None
-
-    student_out: Optional[StudentTrackOut] = None
-    if ref_student:
-        student_out = StudentTrackOut(
-            id=ref_student["id"],
-            name=ref_student["name"],
-            artist=ref_student["artist"],
-            task=ref_student["task"],
-            audio_url=ref_student["audio_url"],
-            features=ref_feats,
-        )
-
-    return {
-        "task": task,
-        "reference_track": student_out,
-        "count": len(top_tracks),
-        "tracks": top_tracks,
-    }
+    # Return top N
+    top_tracks = [t for _, t in scored[:limit]]
+    print(f"[AppleReco] Returning {len(top_tracks)} tracks for vibe '{vibe}'")
+    return top_tracks
