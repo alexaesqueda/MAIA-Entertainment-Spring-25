@@ -1,23 +1,27 @@
 # src/app/main.py
 
-from typing import Optional, List
+from __future__ import annotations
+
+from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
-from .student_tracks import list_tasks
-from .apple import recommend_from_task, TrackOut, StudentTrackOut
-
-
-app = FastAPI(
-    title="Task-Based Music Recommender (Student + Apple)",
-    version="1.0.0",
+from src.app.apple_music import recommend_tracks_for_vibe, TrackOut
+from src.app.student_vibes import (
+    list_vibes,
+    get_student_tracks_for_vibe,
+    STUDENT_TRACKS,
 )
 
 
-@app.get("/")
-def home():
-    return {"message": "Backend is live (Student + Apple Music style)!"}
+app = FastAPI(title="Vibe Music Recommender (Apple)", version="1.0.0")
+
+
+class RecommendIn(BaseModel):
+    vibe: str
+    limit: int = 25
+    country: Optional[str] = "us"
 
 
 @app.get("/health")
@@ -25,39 +29,42 @@ def health():
     return {"ok": True}
 
 
-@app.get("/tasks")
-def tasks():
+@app.get("/vibes")
+def vibes():
     """
-    List all task labels that we have at least one student track for.
+    List the vibe labels for which we have student tracks.
     """
-    return {"tasks": list_tasks()}
+    return {"vibes": list_vibes()}
 
 
-class RecommendIn(BaseModel):
-    task: str = Field(..., description="Task label, e.g. productivity, creative, relax")
-    limit: int = Field(25, ge=1, le=100)
-    market: Optional[str] = Field("US", description="Country code for Apple iTunes, e.g. US, GB, IN")
+@app.get("/student-tracks")
+def student_tracks(vibe: Optional[str] = None):
+    """
+    Debug endpoint: see student tracks, optionally filtered by vibe.
+    """
+    if vibe:
+        tracks = get_student_tracks_for_vibe(vibe)
+    else:
+        tracks = STUDENT_TRACKS
+    return {"count": len(tracks), "tracks": tracks}
 
 
-class RecommendOut(BaseModel):
-    task: str
-    reference_track: Optional[StudentTrackOut]
-    count: int
-    tracks: List[TrackOut]
-
-
-@app.post("/recommend", response_model=RecommendOut)
+@app.post("/recommend")
 def recommend(body: RecommendIn):
     """
-    Recommend a student musician reference track + similar Apple tracks for the task.
+    Recommend Apple Music tracks for a vibe,
+    based on similarity to student musician tracks.
     """
     try:
-        result = recommend_from_task(
-            task=body.task,
+        tracks: List[TrackOut] = recommend_tracks_for_vibe(
+            vibe=body.vibe,
             limit=body.limit,
-            market=body.market,
+            country=body.country or "us",
         )
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        print("[/recommend] Unexpected error:", repr(e))
+        raise HTTPException(status_code=500, detail="Internal recommendation error")
 
-    return result
+    return {"count": len(tracks), "tracks": [t.model_dump() for t in tracks]}
