@@ -17,10 +17,10 @@ import librosa
 STUDENT_TRACKS: List[Dict[str, Any]] = [
     {
         "id": "student_focus_1",
-        "title": "Deep Work Theme",
-        "artist": "Student A",
+        "title": "Takes a While",
+        "artist": "Alexine Sakkers",
         "vibe": "focus",
-        "audio_url": "https://example.com/student_focus_1.mp3",
+        "audio_url": "https://drive.google.com/uc?export=download&id=11DTWdZNWDLgpPjhxGC5XssqBS0cog5t6",
     },
     {
         "id": "student_creative_1",
