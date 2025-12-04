@@ -3,22 +3,22 @@
 from typing import List, Optional, Dict, Any
 
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 from .apple_music import (
     recommend_tracks_for_vibe,
     create_library_playlist,
 )
-from .student_tracks import list_vibes
+from .student_tracks import list_vibes  # your existing student_vibes/student_tracks file
 
 
 app = FastAPI(title="Stanza – Apple Music Backend")
 
-# ---------------- CORS ----------------
+# CORS – allow your Streamlit domain to call this API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # you can tighten this later to your Streamlit URL
+    allow_origins=["*"],  # tighten later
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -31,9 +31,9 @@ class AppleRecommendIn(BaseModel):
     """
     Request body for recommending tracks for a vibe.
     """
-    user_token: Optional[str] = None   # reserved if you ever need it; not used for catalog search
+    user_token: Optional[str] = None   # Music-User-Token, not required for catalog search
     vibe: str
-    storefront: str = "us"            # Apple storefront e.g. "us", "in"
+    storefront: str = "us"             # Apple storefront, e.g. "us", "in"
     limit: int = 25
 
 
@@ -56,9 +56,7 @@ class AppleRecommendOut(BaseModel):
 
 
 class ApplePlaylistIn(BaseModel):
-    # NOTE: required only if you actually call Apple’s library APIs.
-    # If you’re just returning a URL template, you may not need this yet.
-    user_token: Optional[str] = None
+    user_token: str             # Music-User-Token (required to write to user library)
     storefront: str = "us"
     vibe: str
     name: str
@@ -68,11 +66,10 @@ class ApplePlaylistIn(BaseModel):
 
 class ApplePlaylistOut(BaseModel):
     ok: bool
-    playlist_id: Optional[str] = None
-    url: Optional[str] = None
+    playlist_id: Optional[str]
 
 
-# ---------- Health ----------
+# ---------- Simple health ----------
 
 @app.get("/health")
 def health():
@@ -87,17 +84,16 @@ def get_vibes():
     Return the set of vibes for which we have student tracks.
     """
     vibes = list_vibes()
-    # you can extend this later with per-vibe details if you want
-    return {"vibes": vibes, "details": {}}
+    return {"vibes": vibes}
 
 
 # ---------- Apple Music recommendations ----------
-# IMPORTANT: expose BOTH /recommend and /apple/recommend
-# so your Streamlit can call either path without 404.
 
 @app.post("/apple/recommend", response_model=AppleRecommendOut)
-@app.post("/recommend", response_model=AppleRecommendOut)
 def apple_recommend(body: AppleRecommendIn):
+    """
+    Primary Apple Music recommendation endpoint.
+    """
     if body.limit <= 0:
         raise HTTPException(status_code=400, detail="limit must be > 0")
 
@@ -111,18 +107,28 @@ def apple_recommend(body: AppleRecommendIn):
     return AppleRecommendOut(ok=True, vibe=body.vibe, count=len(out_tracks), tracks=out_tracks)
 
 
+# (Optional) backwards-compatible alias: /recommend -> same behaviour
+@app.post("/recommend", response_model=AppleRecommendOut)
+def recommend_alias(body: AppleRecommendIn):
+    """
+    Legacy alias for Apple recommendations, so old frontends using /recommend still work.
+    """
+    return apple_recommend(body)
+
+
 # ---------- Apple Music playlist creation ----------
-# Same trick: BOTH /playlist and /apple/playlist exist.
 
 @app.post("/apple/playlist", response_model=ApplePlaylistOut)
-@app.post("/playlist", response_model=ApplePlaylistOut)
 def apple_playlist(body: ApplePlaylistIn):
+    """
+    Create a playlist in the user's Apple Music library.
+    """
+    if not body.user_token:
+        raise HTTPException(status_code=400, detail="Apple Music user_token is required to create a playlist.")
     if not body.track_ids:
         raise HTTPException(status_code=400, detail="No track_ids provided.")
 
-    # If you’re not yet calling real Apple Music library APIs,
-    # you can just build a shareable URL from track_ids.
-    playlist_id, url = create_library_playlist(
+    playlist_id = create_library_playlist(
         user_token=body.user_token,
         storefront=body.storefront,
         name=body.name,
@@ -130,7 +136,7 @@ def apple_playlist(body: ApplePlaylistIn):
         track_ids=body.track_ids,
     )
 
-    if not playlist_id and not url:
+    if not playlist_id:
         raise HTTPException(status_code=500, detail="Failed to create playlist in Apple Music")
 
-    return ApplePlaylistOut(ok=True, playlist_id=playlist_id, url=url)
+    return ApplePlaylistOut(ok=True, playlist_id=playlist_id)
