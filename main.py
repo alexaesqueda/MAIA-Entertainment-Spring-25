@@ -1,154 +1,127 @@
-# src/app/main.py  (only the top part changed to include a print)
+# src/app/main.py
 
-from typing import Optional, List
-from fastapi import FastAPI, Depends, HTTPException
-from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
-from sqlalchemy import select
+from typing import List, Optional, Dict, Any
 
-from src.app.db import get_db, Base, engine
-from src.app.models import UserToken
-from src.app.auth import router as auth_router
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
-# IMPORTANT: import the module itself so we can print its file path
-from src.app import spotify as spotify_module
-from src.app.spotify import (
-    ensure_valid_token,
-    get_me,
-    recommend_tracks,
-    create_playlist,
-    add_tracks_to_playlist,
+from .apple_music import (
+    recommend_tracks_for_vibe,
+    create_library_playlist,
 )
-from src.app.vibes import VIBE_FEATURES
+from .student_tracks import list_vibes  # you'll define this in student_tracks.py
 
-Base.metadata.create_all(bind=engine)
+app = FastAPI(title="Stanza – Apple Music Backend")
 
-app = FastAPI(title="Vibe Music Recommender", version="1.0.0")
-@app.get("/")
-def home():
-    return {"message": "Backend is live!"}
-app.include_router(auth_router)
-
-# PROVE WHICH FILES ARE RUNNING
-print(">>> LOADED main.py FROM:", __file__)
-print(">>> LOADED spotify.py FROM:", spotify_module.__file__)
-
+# CORS – allow your Streamlit domain to call this API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # tighten this later
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
-# -------------------- DEBUG ROUTES --------------------
-@app.get("/debug/ping")
-def debug_ping():
-    return {"ok": True}
+# ---------- Pydantic models ----------
 
-@app.get("/debug/user/{sid}")
-def debug_user(sid: str, db: Session = Depends(get_db)):
-    ut = db.execute(select(UserToken).where(UserToken.spotify_user_id == sid)).scalars().first()
-    if not ut:
-        return {"found": False}
-    return {
-        "found": True,
-        "expires_at": ut.token_expires_at,
-        "scope": ut.token_scope,
-        "has_refresh": bool(ut.refresh_token),
-    }
-# ------------------ END DEBUG ROUTES ------------------
-
-class RecommendIn(BaseModel):
-    spotify_user_id: str = Field(..., description="Spotify user id returned from /callback")
+class AppleRecommendIn(BaseModel):
+    """
+    Request body for recommending tracks for a vibe.
+    """
+    user_token: Optional[str] = None   # Music-User-Token, not strictly required for catalog search
     vibe: str
-    lyrical: bool = True
-    limit: int = 30
-    market: Optional[str] = None  # e.g., "US"
+    storefront: str = "us"            # Apple storefront e.g. "us", "in"
+    limit: int = 25
 
-class PlaylistIn(BaseModel):
-    spotify_user_id: str
+
+class AppleRecommendOutTrack(BaseModel):
+    id: str
+    name: Optional[str]
+    artist_name: Optional[str]
+    album_name: Optional[str]
+    preview_url: Optional[str]
+    apple_music_url: Optional[str]
+    features: Dict[str, Any]
+    similarity: float
+
+
+class AppleRecommendOut(BaseModel):
+    ok: bool
+    vibe: str
+    count: int
+    tracks: List[AppleRecommendOutTrack]
+
+
+class ApplePlaylistIn(BaseModel):
+    user_token: str             # Music-User-Token (required for library)
+    storefront: str = "us"
+    vibe: str
     name: str
-    description: str = ""
-    public: bool = False
-    track_uris: List[str]
+    description: str
+    track_ids: List[str]
 
-class RecommendAndCreateIn(BaseModel):
-    spotify_user_id: str
-    vibe: str
-    lyrical: bool = True
-    limit: int = 30
-    market: Optional[str] = None
-    playlist_name: str
-    playlist_description: str = ""
-    public: bool = False
+
+class ApplePlaylistOut(BaseModel):
+    ok: bool
+    playlist_id: Optional[str]
+
+
+# ---------- Simple health ----------
 
 @app.get("/health")
 def health():
-    return {"ok": True}
+    return {"status": "ok", "service": "stanza-apple-music"}
+
+
+# ---------- Vibes catalog ----------
 
 @app.get("/vibes")
-def vibes():
-    return {"vibes": list(VIBE_FEATURES.keys()), "details": VIBE_FEATURES}
+def get_vibes():
+    """
+    Return the set of vibes for which we have student tracks.
+    """
+    vibes = list_vibes()
+    return {"vibes": vibes}
 
-def get_user_token(db: Session, spotify_user_id: str) -> UserToken:
-    ut = db.execute(select(UserToken).where(UserToken.spotify_user_id == spotify_user_id)).scalars().first()
-    if not ut:
-        raise HTTPException(status_code=404, detail="User not authorized. Call /login then /callback first.")
-    return ut
 
-@app.post("/recommend")
-def recommend(body: RecommendIn, db: Session = Depends(get_db)):
-    try:
-        print("Received body:", body)
-        ut = get_user_token(db, body.spotify_user_id)
-        print("User token:", ut)
-        ut = ensure_valid_token(db, ut)
-        print("Validated token:", ut)
+# ---------- Apple Music recommendations ----------
 
-        genre_map = {
-            "mellow": "chill",
-            "energetic": "party",
-            "sad": "sad",
-            "happy": "pop",
-            "focus": "ambient",
-            "epic": "soundtracks"
-        }
-        
-        tracks = recommend_tracks(
-            access_token=ut.access_token,
-            vibe=body.vibe,
-            lyrical=body.lyrical,
-            limit=body.limit,
-            market=body.market
-        )
-        print("Tracks generated:", tracks)
-        return {"count": len(tracks), "tracks": [t.model_dump() for t in tracks]}
-    except Exception as e:
-        print("ERROR in /recommend:", e)
-        raise HTTPException(status_code=500, detail=str(e))
+@app.post("/apple/recommend", response_model=AppleRecommendOut)
+def apple_recommend(body: AppleRecommendIn):
+    if body.limit <= 0:
+        raise HTTPException(status_code=400, detail="limit must be > 0")
 
-@app.post("/playlist")
-def playlist(body: PlaylistIn, db: Session = Depends(get_db)):
-    ut = get_user_token(db, body.spotify_user_id)
-    ut = ensure_valid_token(db, ut)
-    me = get_me(ut.access_token)
-    pid = create_playlist(ut.access_token, me["id"], body.name, body.description, body.public)
-    add_tracks_to_playlist(ut.access_token, pid, body.track_uris)
-    return {"ok": True, "playlist_id": pid, "url": f"https://open.spotify.com/playlist/{pid}"}
-
-@app.post("/recommend-and-create")
-def recommend_and_create(body: RecommendAndCreateIn, db: Session = Depends(get_db)):
-    ut = get_user_token(db, body.spotify_user_id)
-    ut = ensure_valid_token(db, ut)
-    tracks = recommend_tracks(
-        access_token=ut.access_token,
+    tracks = recommend_tracks_for_vibe(
         vibe=body.vibe,
-        lyrical=body.lyrical,
+        storefront=body.storefront,
         limit=body.limit,
-        market=body.market
     )
-    me = get_me(ut.access_token)
-    pid = create_playlist(ut.access_token, me["id"], body.playlist_name, body.playlist_description, body.public)
-    add_tracks_to_playlist(ut.access_token, pid, [t.uri for t in tracks])
-    return {
-        "ok": True,
-        "created": len(tracks),
-        "playlist_id": pid,
-        "url": f"https://open.spotify.com/playlist/{pid}",
-        "tracks": [t.model_dump() for t in tracks],
-    }
+
+    out_tracks = [AppleRecommendOutTrack(**t) for t in tracks]
+    return AppleRecommendOut(ok=True, vibe=body.vibe, count=len(out_tracks), tracks=out_tracks)
+
+
+# ---------- Apple Music playlist creation ----------
+
+@app.post("/apple/playlist", response_model=ApplePlaylistOut)
+def apple_playlist(body: ApplePlaylistIn):
+    if not body.user_token:
+        raise HTTPException(status_code=400, detail="Apple Music user_token is required to create a playlist.")
+
+    if not body.track_ids:
+        raise HTTPException(status_code=400, detail="No track_ids provided.")
+
+    playlist_id = create_library_playlist(
+        user_token=body.user_token,
+        storefront=body.storefront,
+        name=body.name,
+        description=body.description,
+        track_ids=body.track_ids,
+    )
+
+    if not playlist_id:
+        raise HTTPException(status_code=500, detail="Failed to create playlist in Apple Music")
+
+    return ApplePlaylistOut(ok=True, playlist_id=playlist_id)
