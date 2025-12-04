@@ -5,32 +5,48 @@ Frontend for:
 - Choosing a vibe (task)
 - Asking backend for recommended tracks (student-seeded, Apple previews)
 - Letting user review + pick tracks
-- Creating a playlist link in Apple Music via backend
+- Creating an Apple Music playlist in the user’s library (via backend)
 
-Backend expectations:
+Backend expectations (Apple version):
+-------------------------------------
 - GET  /vibes
     -> { "vibes": ["focus", "creative", ...],
          "details": { "focus": { "note": "...", ...}, ... } }  (details optional)
 
-- POST /recommend
-    Body: { "vibe": "focus", "limit": 25 }
-    -> { "tracks": [
-           {
-             "id": "apple_track_id_or_internal_id",
-             "title": "Song Name"   # or "name"
-             "artist": "Artist Name"  # or "artists": [...]
-             "preview_url": "https://audio-preview-url.m4a",
-             "apple_url": "https://music.apple.com/...",
-             "features": { ... optional numeric features ... }
-           }, ...
-         ] }
-
-- POST /playlist
+- POST /apple/recommend
     Body: {
       "vibe": "focus",
-      "track_ids": ["id1", "id2", ...]
+      "limit": 25,
+      "storefront": "us"
     }
-    -> { "url": "https://music.apple.com/playlist/..." }
+    -> {
+      "ok": true,
+      "vibe": "focus",
+      "count": 25,
+      "tracks": [
+        {
+          "id": "apple_track_id",
+          "name": "Song Name",
+          "artist_name": "Artist Name",
+          "album_name": "Album",
+          "preview_url": "https://audio-preview-url.m4a",
+          "apple_music_url": "https://music.apple.com/...",
+          "features": { "tempo": ..., "energy": ..., ... },
+          "similarity": 0.87
+        }, ...
+      ]
+    }
+
+- POST /apple/playlist
+    Body: {
+      "user_token": "<Apple Music user token>",
+      "storefront": "us",
+      "vibe": "focus",
+      "name": "Playlist name",
+      "description": "Playlist desc",
+      "track_ids": ["apple_track_id1", "apple_track_id2", ...]
+    }
+    -> { "ok": true, "playlist_id": "..." }  (or plus a URL if your backend returns it)
 """
 
 import os
@@ -184,6 +200,8 @@ if "rec_tracks" not in st.session_state:
     st.session_state.rec_tracks = []
 if "selected_ids" not in st.session_state:
     st.session_state.selected_ids = set()
+if "apple_user_token" not in st.session_state:
+    st.session_state.apple_user_token = ""
 
 # ------------------ Backend helpers ------------------
 
@@ -215,7 +233,7 @@ def fetch_vibes():
 # ------------------ UI Blocks ------------------
 
 def header():
-    left_pad, left, right = st.columns([0.1, 0.6, 0.1])
+    left_pad, left, right = st.columns([0.1, 0.6, 0.3])
 
     with left:
         st.markdown(
@@ -231,20 +249,29 @@ def header():
         )
 
     with right:
+        # Apple Music user token input (for playlist creation)
         st.markdown(
             """
-            <div style='display:inline-block; width:fit-content; margin-left:auto; float:right;
-                text-align:center; padding:10px 14px;
+            <div style='padding:8px 12px; margin-bottom:6px;
                 background:rgba(15, 23, 42, 0.65);
                 border-radius:12px; color:#e5e7ff;
-                border:1px solid rgba(148, 163, 184, 0.4);
-                margin-top:20px;'>
-                <div style='font-size:0.8rem; opacity:0.9; white-space:nowrap;'>🎧 Powered by Apple Music previews</div>
-                <div style='font-size:0.75rem; opacity:0.75; white-space:nowrap;'>No login needed — playlists open in Apple Music</div>
+                border:1px solid rgba(148, 163, 184, 0.4);'>
+                <div style='font-size:0.85rem; font-weight:600;'>Apple Music User Token</div>
+                <div style='font-size:0.75rem; opacity:0.85;'>
+                    Required only to save playlists to your Apple Music library.<br>
+                    You can still get recommendations without it.
+                </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
+        token = st.text_input(
+            "Paste your Apple Music user token",
+            value=st.session_state.apple_user_token,
+            type="password",
+            label_visibility="collapsed",
+        )
+        st.session_state.apple_user_token = token
 
     st.markdown(
         "<div style='height:2px; background:linear-gradient(90deg, transparent, #667eea, transparent); margin:2rem 0;'></div>",
@@ -279,7 +306,6 @@ def vibe_controls():
 
     details = st.session_state.vibe_details.get(vibe) or {}
     if details:
-        # If backend provides explanation text, show it
         note = details.get("note") or details.get("description")
         if note:
             st.caption(note)
@@ -296,8 +322,13 @@ def recommend_action(vibe: str, limit: int):
 
     with st.spinner("🎵 Analyzing student tracks and finding similar Apple Music songs..."):
         try:
-            payload = {"vibe": vibe, "limit": limit}
-            data = api_post("/recommend", payload)
+            payload = {
+                "vibe": vibe,
+                "limit": limit,
+                "storefront": "us",  # adjust if you support other storefronts
+            }
+            # 🔴 IMPORTANT: use Apple endpoint, not /recommend
+            data = api_post("/apple/recommend", payload)
             tracks = data.get("tracks", [])
             st.session_state.rec_tracks = tracks
             st.session_state.selected_ids = set(t.get("id") for t in tracks if t.get("id"))
@@ -332,14 +363,18 @@ def tracks_table():
 
     for idx, t in enumerate(tracks, start=1):
         tid = t.get("id")
-        title = t.get("title") or t.get("name") or "Unknown title"
-        artist = t.get("artist") or ", ".join(t.get("artists", [])) or "Unknown artist"
+        # support both AppleRecommendOutTrack shape and older shape
+        title = t.get("name") or t.get("title") or "Unknown title"
+        artist = (
+            t.get("artist_name")
+            or t.get("artist")
+            or ", ".join(t.get("artists", []))
+            or "Unknown artist"
+        )
         preview = t.get("preview_url")
-        link = t.get("apple_url") or t.get("external_url")
+        link = t.get("apple_music_url") or t.get("apple_url") or t.get("external_url")
 
         features = t.get("features", {}) or {}
-        # Features might come from your librosa pipeline and include
-        # tempo, energy, zcr, centroid, bandwidth, etc.
         metrics = []
         for key in ["tempo", "energy", "zcr", "centroid", "bandwidth"]:
             val = features.get(key)
@@ -382,10 +417,10 @@ def create_playlist_block(vibe: str):
     tracks = st.session_state.rec_tracks or []
     selected_ids = list(st.session_state.selected_ids)
 
-    st.subheader("4) Create Apple Music playlist link")
+    st.subheader("4) Create Apple Music playlist (in your library)")
 
     default_name = f"{vibe.capitalize()} • {time.strftime('%b %d, %Y')}"
-    name = st.text_input("Playlist name (for backend / metadata)", value=default_name)
+    name = st.text_input("Playlist name", value=default_name)
     description = st.text_area(
         "Description (optional)",
         value=f"Task-based {vibe} playlist generated by Stanza.",
@@ -396,15 +431,14 @@ def create_playlist_block(vibe: str):
         use_all = st.toggle("Use all recommended tracks", value=True)
     with colB:
         st.caption(
-            "If off, only tracks you left checked above will be used to build the playlist link."
+            "If off, only tracks you left checked above will be used."
         )
 
-    create = st.button("🪄 CREATE APPLE MUSIC PLAYLIST LINK", type="primary", use_container_width=True)
+    create = st.button("🪄 CREATE APPLE MUSIC PLAYLIST", type="primary", use_container_width=True)
 
     if not create:
         return
 
-    # Decide which track IDs to send
     if use_all:
         track_ids = [t.get("id") for t in tracks if t.get("id")]
     else:
@@ -414,21 +448,28 @@ def create_playlist_block(vibe: str):
         st.warning("⚠️ No tracks to include. Please recommend tracks and/or select at least one.")
         return
 
-    with st.spinner("🎧 Building your Apple Music playlist link..."):
+    user_token = st.session_state.apple_user_token.strip()
+    if not user_token:
+        st.error("❌ Apple Music user token is required to create a playlist in your library.")
+        return
+
+    with st.spinner("🎧 Creating your Apple Music playlist..."):
         try:
             payload = {
+                "user_token": user_token,
+                "storefront": "us",  # adjust if needed
                 "vibe": vibe,
-                "track_ids": track_ids,
                 "name": name,
                 "description": description,
+                "track_ids": track_ids,
             }
-            res = api_post("/playlist", payload)
-            url = res.get("url")
-            if url:
-                st.success("✅ Playlist link created!")
-                st.link_button("🎵 Open in Apple Music", url)
-            else:
-                st.warning("Playlist created, but backend did not return a URL.")
+            # 🔴 IMPORTANT: use Apple playlist endpoint
+            res = api_post("/apple/playlist", payload)
+            playlist_id = res.get("playlist_id")
+            st.success("✅ Playlist created in your Apple Music library!")
+            if playlist_id:
+                # You can construct a URL if your backend doesn't return one
+                st.caption(f"Playlist ID: {playlist_id}")
         except Exception as e:
             st.error(f"❌ Playlist creation failed: {e}")
 
