@@ -1,145 +1,230 @@
 # src/app/apple_music.py
 
-from __future__ import annotations
-
+import os
+import time
 import math
 from typing import List, Dict, Any, Optional
 
+from dotenv import load_dotenv
 import httpx
-from pydantic import BaseModel
 
-from src.app.student_vibes import (
-    extract_features_from_audio_bytes,
-    get_reference_features_for_vibe,
-)
+from .audio_features import extract_features_from_url
+from .student_tracks import get_reference_features_for_vibe
 
-import jwt
-import time
-import os
+# Load env variables
+load_dotenv(override=True)
 
-ITUNES_SEARCH_URL = "https://itunes.apple.com/search"
+APPLE_DEVELOPER_TOKEN = os.getenv("APPLE_DEVELOPER_TOKEN")
+APPLE_MUSIC_BASE_URL = "https://api.music.apple.com"
 
-TEAM_ID = os.getenv("APPLE_MUSIC_TEAM_ID")
-KEY_ID = os.getenv("APPLE_MUSIC_KEY_ID")
-PRIVATE_KEY_PATH = os.getenv("APPLE_MUSIC_PRIVATE_KEY_PATH")
-STORE_FRONT = os.getenv("APPLE_MUSIC_STORE_FRONT", "us")
+if not APPLE_DEVELOPER_TOKEN:
+    print("[AppleMusic] WARNING: APPLE_DEVELOPER_TOKEN not set. Apple APIs will fail.")
 
-with open(PRIVATE_KEY_PATH, "r") as f:
-    PRIVATE_KEY = f.read()
 
-def get_developer_token() -> str:
+def apple_auth_headers(user_token: Optional[str] = None) -> Dict[str, str]:
+    """
+    Build headers for Apple Music API calls.
+    Developer token is required. User token is optional (needed for library actions).
+    """
     headers = {
-        "alg": "ES256",
-        "kid": KEY_ID,
+        "Authorization": f"Bearer {APPLE_DEVELOPER_TOKEN}",
+        "Accept": "application/json",
     }
-    payload = {
-        "iss": TEAM_ID,
-        "iat": int(time.time()),
-        "exp": int(time.time()) + 60 * 60 * 12,  # 12 hours
-    }
-    return jwt.encode(payload, PRIVATE_KEY, algorithm="ES256", headers=headers)
-
-def apple_music_search(query: str, limit: int = 25):
-    token = get_developer_token()
-    url = f"https://api.music.apple.com/v1/catalog/{STORE_FRONT}/search"
-    params = {"term": query, "limit": limit, "types": "songs"}
-    headers = {"Authorization": f"Bearer {token}"}
-    with httpx.Client(timeout=15.0) as client:
-        r = client.get(url, params=params, headers=headers)
-        r.raise_for_status()
-        return r.json()
+    if user_token:
+        headers["Music-User-Token"] = user_token
+    return headers
 
 
-class TrackOut(BaseModel):
-    id: str
-    name: str
-    artists: List[str]
-    preview_url: Optional[str]
-    external_url: Optional[str]
-    features: Dict[str, Any]
-
-
-def search_apple_candidates_for_vibe(
+def search_tracks_for_vibe(
     vibe: str,
-    country: str = "us",
-    limit: int = 50,
+    storefront: str,
+    limit: int = 30,
 ) -> List[Dict[str, Any]]:
     """
-    Use iTunes Search API to pull a rough candidate set of songs for this vibe.
-    We'll refine later based on audio similarity.
+    Search Apple Music catalog for tracks roughly matching a vibe using keywords.
+    This does NOT yet use audio features; it just returns catalog metadata.
     """
-    params = {
-        "term": vibe,
-        "media": "music",
-        "entity": "song",
-        "country": country,
-        "limit": limit,
+    # Simple keyword mapping; you can tune these later
+    vibe_query_map = {
+        "focus": "focus study instrumental",
+        "creative": "creative thinking ambient",
+        "mellow": "chill mellow lo-fi",
+        "energetic": "high energy workout",
+        "happy": "happy upbeat pop",
+        "sad": "sad emotional piano",
+        "epic": "epic cinematic orchestral",
     }
+    query = vibe_query_map.get(vibe.lower(), vibe)
+
+    params = {
+        "term": query,
+        "types": "songs",
+        "limit": min(max(limit, 1), 50),
+    }
+
+    url = f"{APPLE_MUSIC_BASE_URL}/v1/catalog/{storefront}/search"
+    print(f"[AppleMusic] Searching Apple Music for vibe='{vibe}', query='{query}' storefront='{storefront}'")
+
     with httpx.Client(timeout=20.0) as client:
-        r = client.get(ITUNES_SEARCH_URL, params=params)
+        r = client.get(url, params=params, headers=apple_auth_headers())
         r.raise_for_status()
         data = r.json()
-        return data.get("results", [])
+
+    songs = data.get("results", {}).get("songs", {}).get("data", [])
+    print(f"[AppleMusic] Search returned {len(songs)} raw songs.")
+    return songs
+
+
+def extract_preview_features_for_track(track: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """
+    Given an Apple Music song object, find a preview URL, download it,
+    and run it through the librosa feature extractor.
+    """
+    attrs = track.get("attributes", {})
+    previews = attrs.get("previews") or []
+    if not previews:
+        return None
+
+    # Usually the first preview is enough
+    preview_url = previews[0].get("url")
+    if not preview_url:
+        return None
+
+    feats = extract_features_from_url(preview_url)
+    if not feats:
+        return None
+
+    # Attach preview URL into the feature dict so caller can reuse it
+    feats["preview_url"] = preview_url
+    return feats
+
+
+def cosine_similarity(vec_a: Dict[str, float], vec_b: Dict[str, float]) -> float:
+    """
+    Compute cosine similarity between two feature dicts with numeric values.
+    Keys are assumed to overlap (we'll use the set of keys in vec_a).
+    """
+    keys = [k for k in vec_a.keys() if k in vec_b]
+    if not keys:
+        return 0.0
+
+    dot = 0.0
+    norm_a = 0.0
+    norm_b = 0.0
+
+    for k in keys:
+        a = float(vec_a[k])
+        b = float(vec_b[k])
+        dot += a * b
+        norm_a += a * a
+        norm_b += b * b
+
+    if norm_a == 0.0 or norm_b == 0.0:
+        return 0.0
+
+    return dot / math.sqrt(norm_a * norm_b)
 
 
 def recommend_tracks_for_vibe(
     vibe: str,
+    storefront: str,
     limit: int = 25,
-    country: str = "us",
-) -> List[TrackOut]:
+) -> List[Dict[str, Any]]:
     """
-    Main recommendation function:
-      1) Get reference features from student tracks for this vibe.
-      2) Search Apple Music/iTunes for candidates.
-      3) For each candidate with a previewUrl, download audio and compute features.
-      4) Rank candidates by distance to reference features.
+    Core Apple Music recommendation logic:
+
+    1. Get the reference feature vector for this vibe from student tracks.
+    2. Search Apple Music for candidate tracks.
+    3. For each track, try to extract audio features from its preview.
+    4. Rank tracks by cosine similarity to the vibe reference.
+    5. Return top-N with preview URLs + similarity scores.
     """
-    ref = get_reference_features_for_vibe(vibe)
-    if not ref:
-        raise ValueError(f"No reference features available for vibe '{vibe}'")
+    ref_features = get_reference_features_for_vibe(vibe)
+    if not ref_features:
+        print(f"[AppleMusic] No reference features for vibe '{vibe}'")
+        return []
 
-    candidates = search_apple_candidates_for_vibe(vibe, country=country, limit=80)
+    raw_candidates = search_tracks_for_vibe(vibe, storefront=storefront, limit=50)
 
-    scored: List[tuple[float, TrackOut]] = []
+    scored_tracks: List[Dict[str, Any]] = []
+    for track in raw_candidates:
+        feats = extract_preview_features_for_track(track)
+        if not feats:
+            continue
 
-    keys = list(ref.keys())
+        # Remove preview_url from the feature vector used for similarity
+        feature_vector = {
+            k: float(v)
+            for k, v in feats.items()
+            if k in ref_features and isinstance(v, (int, float))
+        }
 
-    def distance(feat: Dict[str, float]) -> float:
-        # Euclidean distance in feature space
-        s = 0.0
-        for k in keys:
-            s += (float(feat.get(k, 0.0)) - float(ref.get(k, 0.0))) ** 2
-        return math.sqrt(s)
+        score = cosine_similarity(ref_features, feature_vector)
+        attrs = track.get("attributes", {})
 
-    with httpx.Client(timeout=30.0) as client:
-        for item in candidates:
-            preview_url = item.get("previewUrl")
-            if not preview_url:
-                continue
+        scored_tracks.append(
+            {
+                "id": track.get("id"),
+                "name": attrs.get("name"),
+                "artist_name": attrs.get("artistName"),
+                "album_name": attrs.get("albumName"),
+                "preview_url": feats.get("preview_url"),
+                "apple_music_url": attrs.get("url"),
+                "features": feature_vector,
+                "similarity": score,
+            }
+        )
 
-            try:
-                audio_resp = client.get(preview_url)
-                audio_resp.raise_for_status()
-                feats = extract_features_from_audio_bytes(audio_resp.content)
-            except Exception as e:
-                print(f"[AppleReco] Failed preview for track {item.get('trackId')}: {e}")
-                continue
+    # Sort by similarity descending
+    scored_tracks.sort(key=lambda t: t["similarity"], reverse=True)
+    print(f"[AppleMusic] Returning {min(len(scored_tracks), limit)} tracks for vibe '{vibe}'.")
 
-            d = distance(feats)
-            t = TrackOut(
-                id=str(item.get("trackId")),
-                name=item.get("trackName", "Unknown title"),
-                artists=[item.get("artistName", "Unknown artist")],
-                preview_url=preview_url,
-                external_url=item.get("trackViewUrl"),
-                features=feats,
-            )
-            scored.append((d, t))
+    return scored_tracks[:limit]
 
-    # Sort by ascending distance (closest = most similar)
-    scored.sort(key=lambda x: x[0])
 
-    # Return top N
-    top_tracks = [t for _, t in scored[:limit]]
-    print(f"[AppleReco] Returning {len(top_tracks)} tracks for vibe '{vibe}'")
-    return top_tracks
+def create_library_playlist(
+    user_token: str,
+    storefront: str,
+    name: str,
+    description: str,
+    track_ids: List[str],
+) -> Optional[str]:
+    """
+    Given an authenticated Apple Music user (via Music-User-Token),
+    create a library playlist and add the given Apple Music track IDs.
+    Returns the playlist URL if successful.
+    """
+    if not track_ids:
+        return None
+
+    # 1) Create playlist
+    url = f"{APPLE_MUSIC_BASE_URL}/v1/me/library/playlists"
+    payload = {
+        "attributes": {
+            "name": name,
+            "description": description,
+        }
+    }
+
+    with httpx.Client(timeout=20.0) as client:
+        r = client.post(url, json=payload, headers=apple_auth_headers(user_token))
+        r.raise_for_status()
+        playlist_data = r.json()
+
+    playlist_id = playlist_data.get("data", [{}])[0].get("id")
+    if not playlist_id:
+        return None
+
+    # 2) Add tracks to playlist
+    relationships_url = f"{APPLE_MUSIC_BASE_URL}/v1/me/library/playlists/{playlist_id}/tracks"
+    track_payload = {
+        "data": [{"id": tid, "type": "songs"} for tid in track_ids]
+    }
+
+    with httpx.Client(timeout=20.0) as client:
+        r = client.post(relationships_url, json=track_payload, headers=apple_auth_headers(user_token))
+        r.raise_for_status()
+
+    # A simple web URL to open the playlist in Apple Music is not always directly returned.
+    # We can at least give the user the library playlist id.
+    return playlist_id
