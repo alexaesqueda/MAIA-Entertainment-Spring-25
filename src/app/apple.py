@@ -13,8 +13,41 @@ from src.app.student_vibes import (
     get_reference_features_for_vibe,
 )
 
+import jwt
+import time
+import os
 
 ITUNES_SEARCH_URL = "https://itunes.apple.com/search"
+
+TEAM_ID = os.getenv("APPLE_MUSIC_TEAM_ID")
+KEY_ID = os.getenv("APPLE_MUSIC_KEY_ID")
+PRIVATE_KEY_PATH = os.getenv("APPLE_MUSIC_PRIVATE_KEY_PATH")
+STORE_FRONT = os.getenv("APPLE_MUSIC_STORE_FRONT", "us")
+
+with open(PRIVATE_KEY_PATH, "r") as f:
+    PRIVATE_KEY = f.read()
+
+def get_developer_token() -> str:
+    headers = {
+        "alg": "ES256",
+        "kid": KEY_ID,
+    }
+    payload = {
+        "iss": TEAM_ID,
+        "iat": int(time.time()),
+        "exp": int(time.time()) + 60 * 60 * 12,  # 12 hours
+    }
+    return jwt.encode(payload, PRIVATE_KEY, algorithm="ES256", headers=headers)
+
+def apple_music_search(query: str, limit: int = 25):
+    token = get_developer_token()
+    url = f"https://api.music.apple.com/v1/catalog/{STORE_FRONT}/search"
+    params = {"term": query, "limit": limit, "types": "songs"}
+    headers = {"Authorization": f"Bearer {token}"}
+    with httpx.Client(timeout=15.0) as client:
+        r = client.get(url, params=params, headers=headers)
+        r.raise_for_status()
+        return r.json()
 
 
 class TrackOut(BaseModel):
