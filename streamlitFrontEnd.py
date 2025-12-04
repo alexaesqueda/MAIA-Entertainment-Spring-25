@@ -1,24 +1,52 @@
 """
-Streamlit Frontend — STANZA (Apple Music version)
-=====================================================
+Streamlit Frontend — STANZA (Apple Music Version)
+=================================================
+Frontend for:
+- Choosing a vibe (task)
+- Asking backend for recommended tracks (student-seeded, Apple previews)
+- Letting user review + pick tracks
+- Creating an Apple Music playlist in the user’s library (via backend)
 
-This frontend:
-- Talks to your FastAPI backend (BACKEND_BASE_URL) to:
-    * GET /vibes   -> list available vibes + details
-    * POST /recommend -> get tracks for a chosen vibe
+Backend expectations (Apple version):
+-------------------------------------
+- GET  /vibes
+    -> { "vibes": ["focus", "creative", ...],
+         "details": { "focus": { "note": "...", ...}, ... } }  (details optional)
 
-The backend:
-- Uses student musician tracks as reference audio.
-- Extracts audio features (librosa).
-- Finds sonically similar songs in Apple Music.
-- Returns tracks with:
-    - name
-    - artists
-    - preview_url (Apple 30s preview)
-    - external_url (Apple Music track URL)
-    - features (tempo, energy, etc.)
+- POST /apple/recommend
+    Body: {
+      "vibe": "focus",
+      "limit": 25,
+      "storefront": "us"
+    }
+    -> {
+      "ok": true,
+      "vibe": "focus",
+      "count": 25,
+      "tracks": [
+        {
+          "id": "apple_track_id",
+          "name": "Song Name",
+          "artist_name": "Artist Name",
+          "album_name": "Album",
+          "preview_url": "https://audio-preview-url.m4a",
+          "apple_music_url": "https://music.apple.com/...",
+          "features": { "tempo": ..., "energy": ..., ... },
+          "similarity": 0.87
+        }, ...
+      ]
+    }
 
-No Spotify login or user tokens are needed.
+- POST /apple/playlist
+    Body: {
+      "user_token": "<Apple Music user token>",
+      "storefront": "us",
+      "vibe": "focus",
+      "name": "Playlist name",
+      "description": "Playlist desc",
+      "track_ids": ["apple_track_id1", "apple_track_id2", ...]
+    }
+    -> { "ok": true, "playlist_id": "..." }  (or plus a URL if your backend returns it)
 """
 
 import os
@@ -29,8 +57,6 @@ from dotenv import load_dotenv
 
 # ------------------ Config ------------------
 load_dotenv(override=True)
-
-# URL of your FastAPI backend (Render)
 BACKEND_BASE_URL = os.getenv(
     "BACKEND_BASE_URL",
     "https://maia-entertainment-spring-25.onrender.com"
@@ -88,7 +114,7 @@ st.markdown(
         box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
       }
 
-      /* CARDS */
+      /* Cards */
       .card {
         border: 1px solid #ececec;
         border-radius: 14px;
@@ -102,28 +128,44 @@ st.markdown(
         transform: translateY(-2px);
       }
 
-      /* Section headers */
+      /* Main section headers */
       .main > div > h2 {
         color: #e5e7ff !important;
         font-weight: 800 !important;
         margin-top: 2rem !important;
         font-size: 1.8rem !important;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.15);
       }
 
       /* Body text */
-      .main p, .stMarkdown, label {
+      .main p,
+      .stMarkdown,
+      label {
         color: #ffffff !important;
         font-size: 1rem;
       }
 
       .stCaption, caption, small {
-        color: #c3c9d8 !important;
+        color: #c7d0e3 !important;
         font-weight: 500;
       }
 
       .ok { color: #10b981; font-weight: 600; }
       .err { color: #bf0631; font-weight: 600; }
+
+      .stTextInput>label,
+      .stTextArea>label,
+      .stSelectbox>label,
+      .stSlider>label {
+        color: #dae2ed !important;
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
+      }
+      .stCheckbox>label,
+      [data-testid="stWidgetLabel"] {
+        color: #dae2ed !important;
+        font-weight: 600 !important;
+      }
 
       .stLinkButton>a {
         border-radius: 16px;
@@ -144,23 +186,12 @@ st.markdown(
         box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
         background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
       }
-
-      .stTextInput>label, .stTextArea>label, .stSelectbox>label, .stSlider>label {
-        color: #dae2ed !important;
-        font-weight: 600 !important;
-        font-size: 0.95rem !important;
-      }
-      .stCheckbox>label, [data-testid="stWidgetLabel"] {
-        color: #dae2ed !important;
-        font-weight: 600 !important;
-      }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 # ------------------ Session State ------------------
-# No spotify_user_id anymore — Apple Music recs don't require user login
 if "vibes" not in st.session_state:
     st.session_state.vibes = []
 if "vibe_details" not in st.session_state:
@@ -169,6 +200,8 @@ if "rec_tracks" not in st.session_state:
     st.session_state.rec_tracks = []
 if "selected_ids" not in st.session_state:
     st.session_state.selected_ids = set()
+if "apple_user_token" not in st.session_state:
+    st.session_state.apple_user_token = ""
 
 # ------------------ Backend helpers ------------------
 
@@ -190,117 +223,122 @@ def api_post(path: str, payload: dict, timeout: int = 30):
 
 @st.cache_data(show_spinner=False, ttl=300)
 def fetch_vibes():
-    """
-    Ask backend for list of vibes and their feature specs.
-
-    Expected backend response:
-    {
-      "vibes": ["focus", "creative", "mellow", ...],
-      "details": {
-         "focus": { "target_energy": ..., "min_tempo": ..., ... },
-         ...
-      }
-    }
-    """
     try:
         vib = api_get("/vibes")
         return vib.get("vibes", []), vib.get("details", {})
     except Exception:
-        # fallback if backend not yet ready
-        return ["focus", "creative", "mellow", "energetic", "happy", "sad"], {}
+        # Fallback if backend not ready
+        return ["focus", "creative", "mellow", "energetic"], {}
 
 # ------------------ UI Blocks ------------------
 
 def header():
-    left_pad, center, _ = st.columns([0.1, 0.8, 0.1])
-    with center:
+    left_pad, left, right = st.columns([0.1, 0.6, 0.3])
+
+    with left:
         st.markdown(
             f"""
-            <h1 style='text-align:center; font-size:3rem; font-weight:800; margin-bottom:0.5rem;'>
+            <h1 style='text-align:center; font-size:3rem; font-weight:800; margin-bottom:0.5rem; color:white;'>
                 {PAGE_TITLE}
             </h1>
             <p style='font-size:1.2rem; color:#e5e7ff; text-align:center; margin-top:-10px;'>
-                ✨ Task-based Apple Music recommendations using student-curated reference tracks.
+                ✨ Task-based Apple Music recommendations, seeded by real student musicians.
             </p>
             """,
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
+
+    with right:
+        # Apple Music user token input (for playlist creation)
+        st.markdown(
+            """
+            <div style='padding:8px 12px; margin-bottom:6px;
+                background:rgba(15, 23, 42, 0.65);
+                border-radius:12px; color:#e5e7ff;
+                border:1px solid rgba(148, 163, 184, 0.4);'>
+                <div style='font-size:0.85rem; font-weight:600;'>Apple Music User Token</div>
+                <div style='font-size:0.75rem; opacity:0.85;'>
+                    Required only to save playlists to your Apple Music library.<br>
+                    You can still get recommendations without it.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        token = st.text_input(
+            "Paste your Apple Music user token",
+            value=st.session_state.apple_user_token,
+            type="password",
+            label_visibility="collapsed",
+        )
+        st.session_state.apple_user_token = token
 
     st.markdown(
         "<div style='height:2px; background:linear-gradient(90deg, transparent, #667eea, transparent); margin:2rem 0;'></div>",
         unsafe_allow_html=True,
     )
 
-def vibe_controls():
-    st.subheader("1) Choose your vibe / task")
 
+def vibe_controls():
+    st.subheader("1) Choose your vibe (task)")
     if not st.session_state.vibes:
         vibes, details = fetch_vibes()
         st.session_state.vibes = vibes
         st.session_state.vibe_details = details
 
-    c1, c2, c3 = st.columns([0.4, 0.3, 0.3])
+    c1, c2 = st.columns([0.5, 0.5])
     with c1:
         vibe = st.selectbox(
-            "Vibe / Task",
+            "Vibe",
             options=st.session_state.vibes,
             index=0,
-            help="For example: focus, creative, mellow, energetic..."
+            help="Pick the task/mode you’re in (e.g., focus, creative, mellow).",
         )
     with c2:
-        lyrical = st.toggle(
-            "Prefer vocals (lyrical)?",
-            value=True,
-            help="Turn off for instrumental / non-lyrical tracks."
-        )
-    with c3:
         limit = st.slider(
-            "Track count",
+            "Number of tracks",
             min_value=5,
             max_value=50,
             value=20,
             step=1,
-            help="How many tracks should we recommend?"
+            help="How many songs you want in your recommendation batch.",
         )
 
-    if st.session_state.vibe_details.get(vibe):
-        spec = st.session_state.vibe_details[vibe]
-        st.caption(
-            f"Reference profile → "
-            f"Energy: {spec.get('target_energy')}, "
-            f"Valence: {spec.get('target_valence')}, "
-            f"Tempo: {spec.get('min_tempo')}–{spec.get('max_tempo')} BPM"
-        )
-    else:
-        st.caption("Using default feature profile for this vibe.")
+    details = st.session_state.vibe_details.get(vibe) or {}
+    if details:
+        note = details.get("note") or details.get("description")
+        if note:
+            st.caption(note)
 
-    return vibe, lyrical, limit
+    return vibe, limit
 
-def recommend_action(vibe: str, lyrical: bool, limit: int):
+
+def recommend_action(vibe: str, limit: int):
     st.subheader("2) Get recommendations")
 
     btn = st.button("✨ RECOMMEND TRACKS", type="primary", use_container_width=True)
     if not btn:
         return
 
-    with st.spinner("🎵 Analyzing student reference tracks and searching Apple Music..."):
+    with st.spinner("🎵 Analyzing student tracks and finding similar Apple Music songs..."):
         try:
             payload = {
                 "vibe": vibe,
-                "lyrical": lyrical,
                 "limit": limit,
+                "storefront": "us",  # adjust if you support other storefronts
             }
-            # Backend Apple endpoint: POST /recommend
-            data = api_post("/recommend", payload)
-            st.session_state.rec_tracks = data.get("tracks", [])
-            # we keep IDs (or URLs) as our "selected" handle
-            st.session_state.selected_ids = set(
-                t.get("id") or t.get("external_url") or t.get("name")
-                for t in st.session_state.rec_tracks
-            )
-            st.success(f"🎉 Got {len(st.session_state.rec_tracks)} tracks for '{vibe}'.")
+            # 🔴 IMPORTANT: use Apple endpoint, not /recommend
+            data = api_post("/apple/recommend", payload)
+            tracks = data.get("tracks", [])
+            st.session_state.rec_tracks = tracks
+            st.session_state.selected_ids = set(t.get("id") for t in tracks if t.get("id"))
+            if tracks:
+                st.success(f"🎉 Got {len(tracks)} recommended tracks for “{vibe}”.")
+            else:
+                st.warning("No tracks found. Try another vibe or a smaller limit.")
         except Exception as e:
             st.error(f"❌ Recommendation failed: {e}")
+
 
 def tracks_table():
     tracks = st.session_state.rec_tracks or []
@@ -310,31 +348,38 @@ def tracks_table():
 
     st.subheader("3) Review & pick tracks")
     st.caption(
-        "Uncheck any songs you don't want in your playlist. "
-        "You can preview 30s Apple samples when available."
+        "Uncheck any songs you don't want in the playlist. You can preview each one (Apple preview audio) if available."
     )
 
-    # Bulk selectors
     c1, c2, _ = st.columns([0.2, 0.2, 0.6])
     with c1:
         if st.button("✅ SELECT ALL"):
-            st.session_state.selected_ids = set(
-                t.get("id") or t.get("external_url") or t.get("name")
-                for t in tracks
-            )
+            st.session_state.selected_ids = set(t.get("id") for t in tracks if t.get("id"))
             st.rerun()
     with c2:
         if st.button("❌ CLEAR ALL"):
             st.session_state.selected_ids = set()
             st.rerun()
 
-    for idx, t in enumerate(tracks, 1):
-        tid = t.get("id") or t.get("external_url") or t.get("name")
-        name = t.get("name")
-        artists = ", ".join(t.get("artists", []))
+    for idx, t in enumerate(tracks, start=1):
+        tid = t.get("id")
+        # support both AppleRecommendOutTrack shape and older shape
+        title = t.get("name") or t.get("title") or "Unknown title"
+        artist = (
+            t.get("artist_name")
+            or t.get("artist")
+            or ", ".join(t.get("artists", []))
+            or "Unknown artist"
+        )
         preview = t.get("preview_url")
-        link = t.get("external_url")   # Apple Music track URL
-        f = t.get("features", {})
+        link = t.get("apple_music_url") or t.get("apple_url") or t.get("external_url")
+
+        features = t.get("features", {}) or {}
+        metrics = []
+        for key in ["tempo", "energy", "zcr", "centroid", "bandwidth"]:
+            val = features.get(key)
+            if isinstance(val, (int, float)):
+                metrics.append(f"{key.capitalize()}: {val:.2f}")
 
         col1, col2 = st.columns([0.05, 0.95])
         with col1:
@@ -343,95 +388,101 @@ def tracks_table():
                 "",
                 value=checked,
                 key=f"chk_{tid}",
-                label_visibility="collapsed"
+                label_visibility="collapsed",
             )
-            if new_val != checked:
-                if new_val:
-                    st.session_state.selected_ids.add(tid)
-                else:
-                    st.session_state.selected_ids.discard(tid)
+            if new_val and tid:
+                st.session_state.selected_ids.add(tid)
+            elif not new_val and tid:
+                st.session_state.selected_ids.discard(tid)
 
         with col2:
             st.markdown(
-                f"<div class='card'><b>#{idx} {name}</b> — {artists}</div>",
-                unsafe_allow_html=True
+                f"<div class='card'><b>#{idx} {title}</b> — {artist}</div>",
+                unsafe_allow_html=True,
             )
-
-            metrics = [
-                ("Energy", f.get("energy")),
-                ("Valence", f.get("valence")),
-                ("Danceability", f.get("danceability")),
-                ("Tempo", f.get("tempo")),
-                ("Instrumentalness", f.get("instrumentalness")),
-            ]
-            st.caption(
-                "  •  ".join(
-                    [
-                        f"{m}: {v:.2f}" if isinstance(v, (int, float)) else f"{m}: —"
-                        for m, v in metrics
-                    ]
-                )
-            )
+            if metrics:
+                st.caption("  •  ".join(metrics))
 
             if preview:
                 st.audio(preview, format="audio/mp3")
 
-            tiny_bits = []
             if link:
-                tiny_bits.append(
-                    f"<a href='{link}' target='_blank'>🎵 Open in Apple Music</a>"
+                st.markdown(
+                    f"<a href='{link}' target='_blank'>🎵 Open in Apple Music</a>",
+                    unsafe_allow_html=True,
                 )
-            if tid:
-                tiny_bits.append(f"ID: <code>{tid}</code>")
 
-            if tiny_bits:
-                st.markdown(" | ".join(tiny_bits), unsafe_allow_html=True)
 
-def export_playlist_block():
+def create_playlist_block(vibe: str):
     tracks = st.session_state.rec_tracks or []
-    selected_ids = st.session_state.selected_ids
+    selected_ids = list(st.session_state.selected_ids)
 
-    st.subheader("4) Export playlist")
+    st.subheader("4) Create Apple Music playlist (in your library)")
 
-    if not tracks:
-        st.info("Generate recommendations first, then you can export.")
+    default_name = f"{vibe.capitalize()} • {time.strftime('%b %d, %Y')}"
+    name = st.text_input("Playlist name", value=default_name)
+    description = st.text_area(
+        "Description (optional)",
+        value=f"Task-based {vibe} playlist generated by Stanza.",
+    )
+
+    colA, colB = st.columns(2)
+    with colA:
+        use_all = st.toggle("Use all recommended tracks", value=True)
+    with colB:
+        st.caption(
+            "If off, only tracks you left checked above will be used."
+        )
+
+    create = st.button("🪄 CREATE APPLE MUSIC PLAYLIST", type="primary", use_container_width=True)
+
+    if not create:
         return
 
-    selected_tracks = [
-        t for t in tracks
-        if (t.get("id") or t.get("external_url") or t.get("name")) in selected_ids
-    ]
+    if use_all:
+        track_ids = [t.get("id") for t in tracks if t.get("id")]
+    else:
+        track_ids = selected_ids
 
-    st.caption(
-        "We can’t auto-write into your Apple Music library from Streamlit, "
-        "but you can quickly build a playlist by opening these links or copying them."
-    )
+    if not track_ids:
+        st.warning("⚠️ No tracks to include. Please recommend tracks and/or select at least one.")
+        return
 
-    urls = [t.get("external_url") for t in selected_tracks if t.get("external_url")]
-    urls_text = "\n".join(urls)
+    user_token = st.session_state.apple_user_token.strip()
+    if not user_token:
+        st.error("❌ Apple Music user token is required to create a playlist in your library.")
+        return
 
-    st.text_area(
-        "Apple Music track URLs (copy-paste into Apple Music to build your playlist):",
-        value=urls_text,
-        height=200,
-    )
+    with st.spinner("🎧 Creating your Apple Music playlist..."):
+        try:
+            payload = {
+                "user_token": user_token,
+                "storefront": "us",  # adjust if needed
+                "vibe": vibe,
+                "name": name,
+                "description": description,
+                "track_ids": track_ids,
+            }
+            # 🔴 IMPORTANT: use Apple playlist endpoint
+            res = api_post("/apple/playlist", payload)
+            playlist_id = res.get("playlist_id")
+            st.success("✅ Playlist created in your Apple Music library!")
+            if playlist_id:
+                # You can construct a URL if your backend doesn't return one
+                st.caption(f"Playlist ID: {playlist_id}")
+        except Exception as e:
+            st.error(f"❌ Playlist creation failed: {e}")
 
-    if urls:
-        st.download_button(
-            "💾 Download URLs as text file",
-            data=urls_text,
-            file_name="stanza_playlist_urls.txt",
-            mime="text/plain",
-        )
 
 # ------------------ Main App ------------------
 
 def main():
     header()
-    vibe, lyrical, limit = vibe_controls()
-    recommend_action(vibe, lyrical, limit)
+    vibe, limit = vibe_controls()
+    recommend_action(vibe, limit)
     tracks_table()
-    export_playlist_block()
+    create_playlist_block(vibe)
+
 
 if __name__ == "__main__":
     main()
