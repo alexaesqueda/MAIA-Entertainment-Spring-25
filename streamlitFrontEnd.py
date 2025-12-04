@@ -242,7 +242,7 @@ def ensure_logged_in():
                 if data.get("ok") and data.get("spotify_user_id"):
                     st.session_state.spotify_user_id = data["spotify_user_id"]
                     st.query_params.clear()
-                    st.success("✅ You're  to Spotify!")
+                    st.success("✅ You're to Spotify!")
                     time.sleep(1)
                     st.rerun()
                     return True
