@@ -1,54 +1,4 @@
-"""
-Streamlit Frontend — STANZA (Apple Music Version)
-=================================================
-Frontend for:
-- Choosing a vibe (task)
-- Asking backend for recommended tracks (student-seeded, Apple previews)
-- Letting user review + pick tracks
-- Creating an Apple Music playlist in the user’s library (via backend)
-
-Backend expectations (Apple version):
--------------------------------------
-- GET  /vibes
-    -> { "vibes": ["focus", "creative", ...],
-         "details": { "focus": { "note": "...", ...}, ... } }  (details optional)
-
-- POST /apple/recommend
-    Body: {
-      "vibe": "focus",
-      "limit": 25,
-      "storefront": "us"
-    }
-    -> {
-      "ok": true,
-      "vibe": "focus",
-      "count": 25,
-      "tracks": [
-        {
-          "id": "apple_track_id",
-          "name": "Song Name",
-          "artist_name": "Artist Name",
-          "album_name": "Album",
-          "preview_url": "https://audio-preview-url.m4a",
-          "apple_music_url": "https://music.apple.com/...",
-          "features": { "tempo": ..., "energy": ..., ... },
-          "similarity": 0.87
-        }, ...
-      ]
-    }
-
-- POST /apple/playlist
-    Body: {
-      "user_token": "<Apple Music user token>",
-      "storefront": "us",
-      "vibe": "focus",
-      "name": "Playlist name",
-      "description": "Playlist desc",
-      "track_ids": ["apple_track_id1", "apple_track_id2", ...]
-    }
-    -> { "ok": true, "playlist_id": "..." }  (or plus a URL if your backend returns it)
-"""
-
+""" Streamlit Frontend — STANZA (Apple Music Version) ================================================= Frontend for: - Choosing a vibe (task) - Asking backend for recommended tracks (student-seeded, Apple previews) - Letting user review + pick tracks - Creating a playlist link in Apple Music via backend Backend expectations: - GET /vibes -> { "vibes": ["focus", "creative", ...], "details": { "focus": { "note": "...", ...}, ... } } (details optional) - POST /recommend Body: { "vibe": "focus", "limit": 25 } -> { "tracks": [ { "id": "apple_track_id_or_internal_id", "title": "Song Name" # or "name" "artist": "Artist Name" # or "artists": [...] "preview_url": "https://audio-preview-url.m4a", "apple_url": "https://music.apple.com/...", "features": { ... optional numeric features ... } }, ... ] } - POST /playlist Body: { "vibe": "focus", "track_ids": ["id1", "id2", ...] } -> { "url": "https://music.apple.com/playlist/..." } """
 import os
 import time
 import requests
@@ -58,159 +8,166 @@ from dotenv import load_dotenv
 # ------------------ Config ------------------
 load_dotenv(override=True)
 BACKEND_BASE_URL = os.getenv(
-    "BACKEND_BASE_URL",
-    "https://maia-entertainment-spring-25.onrender.com"
+    "BACKEND_BASE_URL", "https://maia-entertainment-spring-25.onrender.com"
 ).rstrip("/")
-
 PAGE_TITLE = "‎‎ ‎ ‎ ‎ Stanza"
 PAGE_ICON = "🎵"
-
 st.set_page_config(page_title="Stanza", page_icon=PAGE_ICON, layout="wide")
 
 # ------------------ Styling ------------------
 st.markdown(
     """
-    <style>
-      .stApp {
-        background: linear-gradient(179deg, #0f1015 10%, #5568d3, #6a3f8f 100%);
-        background-attachment: fixed;
-      }
-      .main { background: transparent; }
+<style>
+.stApp {
+  background: linear-gradient(179deg, #0f1015 10%, #5568d3, #6a3f8f 100%);
+  background-attachment: fixed;
+}
+.main {
+  background: transparent;
+}
 
-      /* PRIMARY ACTION BUTTONS */
-      .stButton>button[kind="primary"] {
-        border-radius: 16px;
-        padding: 0.75rem 2rem;
-        font-weight: 700;
-        border: none;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white !important;
-        font-size: 1.1rem;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-      }
-      .stButton>button[kind="primary"]:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-        background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
-      }
+/* PRIMARY ACTION BUTTONS */
+.stButton>button[kind="primary"] {
+  border-radius: 16px;
+  padding: 0.75rem 2rem;
+  font-weight: 700;
+  border: none;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white !important;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+.stButton>button[kind="primary"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+  background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+}
 
-      /* SECONDARY BUTTONS */
-      .stButton>button {
-        border-radius: 12px;
-        padding: 0.6rem 1.5rem;
-        font-weight: 600;
-        border: 2px solid #667eea;
-        background: white;
-        color: #667eea !important;
-        font-size: 1rem;
-        transition: all 0.3s ease;
-      }
-      .stButton>button:hover {
-        background: #667eea;
-        color: white !important;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-      }
+/* SECONDARY BUTTONS */
+.stButton>button {
+  border-radius: 12px;
+  padding: 0.6rem 1.5rem;
+  font-weight: 600;
+  border: 2px solid #667eea;
+  background: white;
+  color: #667eea !important;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+.stButton>button:hover {
+  background: #667eea;
+  color: white !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
 
-      /* Cards */
-      .card {
-        border: 1px solid #ececec;
-        border-radius: 14px;
-        padding: 14px;
-        margin-bottom: 10px;
-        background: white;
-        transition: all 0.3s ease;
-      }
-      .card:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        transform: translateY(-2px);
-      }
+/* Cards */
+.card {
+  border: 1px solid #ececec;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 10px;
+  background: white;
+  transition: all 0.3s ease;
+}
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
 
-      /* Main section headers */
-      .main > div > h2 {
-        color: #e5e7ff !important;
-        font-weight: 800 !important;
-        margin-top: 2rem !important;
-        font-size: 1.8rem !important;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.15);
-      }
+/* Main section headers */
+.main > div > h2 {
+  color: #e5e7ff !important;
+  font-weight: 800 !important;
+  margin-top: 2rem !important;
+  font-size: 1.8rem !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
 
-      /* Body text */
-      .main p,
-      .stMarkdown,
-      label {
-        color: #ffffff !important;
-        font-size: 1rem;
-      }
+/* Body text */
+.main p,
+.stMarkdown,
+label {
+  color: #ffffff !important;
+  font-size: 1rem;
+}
+.stCaption,
+caption,
+small {
+  color: #c7d0e3 !important;
+  font-weight: 500;
+}
 
-      .stCaption, caption, small {
-        color: #c7d0e3 !important;
-        font-weight: 500;
-      }
+.ok {
+  color: #10b981;
+  font-weight: 600;
+}
+.err {
+  color: #bf0631;
+  font-weight: 600;
+}
 
-      .ok { color: #10b981; font-weight: 600; }
-      .err { color: #bf0631; font-weight: 600; }
+.stTextInput>label,
+.stTextArea>label,
+.stSelectbox>label,
+.stSlider>label {
+  color: #dae2ed !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+}
+.stCheckbox>label,
+[data-testid="stWidgetLabel"] {
+  color: #dae2ed !important;
+  font-weight: 600 !important;
+}
 
-      .stTextInput>label,
-      .stTextArea>label,
-      .stSelectbox>label,
-      .stSlider>label {
-        color: #dae2ed !important;
-        font-weight: 600 !important;
-        font-size: 0.95rem !important;
-      }
-      .stCheckbox>label,
-      [data-testid="stWidgetLabel"] {
-        color: #dae2ed !important;
-        font-weight: 600 !important;
-      }
-
-      .stLinkButton>a {
-        border-radius: 16px;
-        padding: 0.75rem 2rem;
-        font-weight: 700;
-        border: none;
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-        color: white !important;
-        font-size: 1.1rem;
-        text-decoration: none !important;
-        display: inline-block;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
-        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-      }
-      .stLinkButton>a:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
-        background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
-      }
-    </style>
-    """,
+.stLinkButton>a {
+  border-radius: 16px;
+  padding: 0.75rem 2rem;
+  font-weight: 700;
+  border: none;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: white !important;
+  font-size: 1.1rem;
+  text-decoration: none !important;
+  display: inline-block;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+.stLinkButton>a:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+}
+</style>
+""",
     unsafe_allow_html=True,
 )
 
 # ------------------ Session State ------------------
 if "vibes" not in st.session_state:
     st.session_state.vibes = []
+
 if "vibe_details" not in st.session_state:
     st.session_state.vibe_details = {}
+
 if "rec_tracks" not in st.session_state:
     st.session_state.rec_tracks = []
+
 if "selected_ids" not in st.session_state:
     st.session_state.selected_ids = set()
-if "apple_user_token" not in st.session_state:
-    st.session_state.apple_user_token = ""
 
 # ------------------ Backend helpers ------------------
-
 def api_get(path: str, params: dict | None = None, timeout: int = 20):
     url = f"{BACKEND_BASE_URL}{path}"
     r = requests.get(url, params=params, timeout=timeout)
     if r.status_code >= 400:
         raise RuntimeError(f"GET {path} failed: {r.status_code} {r.text}")
     return r.json()
+
 
 def api_post(path: str, payload: dict, timeout: int = 30):
     url = f"{BACKEND_BASE_URL}{path}"
@@ -219,8 +176,8 @@ def api_post(path: str, payload: dict, timeout: int = 30):
         raise RuntimeError(f"POST {path} failed: {r.status_code} {r.text}")
     return r.json()
 
-# ------------------ Data fetchers ------------------
 
+# ------------------ Data fetchers ------------------
 @st.cache_data(show_spinner=False, ttl=300)
 def fetch_vibes():
     try:
@@ -230,11 +187,10 @@ def fetch_vibes():
         # Fallback if backend not ready
         return ["focus", "creative", "mellow", "energetic"], {}
 
+
 # ------------------ UI Blocks ------------------
-
 def header():
-    left_pad, left, right = st.columns([0.1, 0.6, 0.3])
-
+    left_pad, left, right = st.columns([0.1, 0.6, 0.1])
     with left:
         st.markdown(
             f"""
@@ -247,31 +203,16 @@ def header():
             """,
             unsafe_allow_html=True,
         )
-
     with right:
-        # Apple Music user token input (for playlist creation)
         st.markdown(
             """
-            <div style='padding:8px 12px; margin-bottom:6px;
-                background:rgba(15, 23, 42, 0.65);
-                border-radius:12px; color:#e5e7ff;
-                border:1px solid rgba(148, 163, 184, 0.4);'>
-                <div style='font-size:0.85rem; font-weight:600;'>Apple Music User Token</div>
-                <div style='font-size:0.75rem; opacity:0.85;'>
-                    Required only to save playlists to your Apple Music library.<br>
-                    You can still get recommendations without it.
-                </div>
+            <div style='display:inline-block; width:fit-content; margin-left:auto; float:right; text-align:center; padding:10px 14px; background:rgba(15, 23, 42, 0.65); border-radius:12px; color:#e5e7ff; border:1px solid rgba(148, 163, 184, 0.4); margin-top:20px;'>
+                <div style='font-size:0.8rem; opacity:0.9; white-space:nowrap;'>🎧 Powered by Apple Music previews</div>
+                <div style='font-size:0.75rem; opacity:0.75; white-space:nowrap;'>No login needed — playlists open in Apple Music</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
-        token = st.text_input(
-            "Paste your Apple Music user token",
-            value=st.session_state.apple_user_token,
-            type="password",
-            label_visibility="collapsed",
-        )
-        st.session_state.apple_user_token = token
 
     st.markdown(
         "<div style='height:2px; background:linear-gradient(90deg, transparent, #667eea, transparent); margin:2rem 0;'></div>",
@@ -281,6 +222,7 @@ def header():
 
 def vibe_controls():
     st.subheader("1) Choose your vibe (task)")
+
     if not st.session_state.vibes:
         vibes, details = fetch_vibes()
         st.session_state.vibes = vibes
@@ -306,6 +248,7 @@ def vibe_controls():
 
     details = st.session_state.vibe_details.get(vibe) or {}
     if details:
+        # If backend provides explanation text, show it
         note = details.get("note") or details.get("description")
         if note:
             st.caption(note)
@@ -315,20 +258,14 @@ def vibe_controls():
 
 def recommend_action(vibe: str, limit: int):
     st.subheader("2) Get recommendations")
-
     btn = st.button("✨ RECOMMEND TRACKS", type="primary", use_container_width=True)
     if not btn:
         return
 
     with st.spinner("🎵 Analyzing student tracks and finding similar Apple Music songs..."):
         try:
-            payload = {
-                "vibe": vibe,
-                "limit": limit,
-                "storefront": "us",  # adjust if you support other storefronts
-            }
-            # 🔴 IMPORTANT: use Apple endpoint, not /recommend
-            data = api_post("/apple/recommend", payload)
+            payload = {"vibe": vibe, "limit": limit}
+            data = api_post("/recommend", payload)
             tracks = data.get("tracks", [])
             st.session_state.rec_tracks = tracks
             st.session_state.selected_ids = set(t.get("id") for t in tracks if t.get("id"))
@@ -363,18 +300,14 @@ def tracks_table():
 
     for idx, t in enumerate(tracks, start=1):
         tid = t.get("id")
-        # support both AppleRecommendOutTrack shape and older shape
-        title = t.get("name") or t.get("title") or "Unknown title"
-        artist = (
-            t.get("artist_name")
-            or t.get("artist")
-            or ", ".join(t.get("artists", []))
-            or "Unknown artist"
-        )
+        title = t.get("title") or t.get("name") or "Unknown title"
+        artist = t.get("artist") or ", ".join(t.get("artists", [])) or "Unknown artist"
         preview = t.get("preview_url")
-        link = t.get("apple_music_url") or t.get("apple_url") or t.get("external_url")
-
+        link = t.get("apple_url") or t.get("external_url")
         features = t.get("features", {}) or {}
+
+        # Features might come from your librosa pipeline and include
+        # tempo, energy, zcr, centroid, bandwidth, etc.
         metrics = []
         for key in ["tempo", "energy", "zcr", "centroid", "bandwidth"]:
             val = features.get(key)
@@ -401,11 +334,9 @@ def tracks_table():
                 unsafe_allow_html=True,
             )
             if metrics:
-                st.caption("  •  ".join(metrics))
-
+                st.caption(" • ".join(metrics))
             if preview:
                 st.audio(preview, format="audio/mp3")
-
             if link:
                 st.markdown(
                     f"<a href='{link}' target='_blank'>🎵 Open in Apple Music</a>",
@@ -417,10 +348,9 @@ def create_playlist_block(vibe: str):
     tracks = st.session_state.rec_tracks or []
     selected_ids = list(st.session_state.selected_ids)
 
-    st.subheader("4) Create Apple Music playlist (in your library)")
-
+    st.subheader("4) Create Apple Music playlist link")
     default_name = f"{vibe.capitalize()} • {time.strftime('%b %d, %Y')}"
-    name = st.text_input("Playlist name", value=default_name)
+    name = st.text_input("Playlist name (for backend / metadata)", value=default_name)
     description = st.text_area(
         "Description (optional)",
         value=f"Task-based {vibe} playlist generated by Stanza.",
@@ -431,14 +361,16 @@ def create_playlist_block(vibe: str):
         use_all = st.toggle("Use all recommended tracks", value=True)
     with colB:
         st.caption(
-            "If off, only tracks you left checked above will be used."
+            "If off, only tracks you left checked above will be used to build the playlist link."
         )
 
-    create = st.button("🪄 CREATE APPLE MUSIC PLAYLIST", type="primary", use_container_width=True)
-
+    create = st.button(
+        "🪄 CREATE APPLE MUSIC PLAYLIST LINK", type="primary", use_container_width=True
+    )
     if not create:
         return
 
+    # Decide which track IDs to send
     if use_all:
         track_ids = [t.get("id") for t in tracks if t.get("id")]
     else:
@@ -448,34 +380,26 @@ def create_playlist_block(vibe: str):
         st.warning("⚠️ No tracks to include. Please recommend tracks and/or select at least one.")
         return
 
-    user_token = st.session_state.apple_user_token.strip()
-    if not user_token:
-        st.error("❌ Apple Music user token is required to create a playlist in your library.")
-        return
-
-    with st.spinner("🎧 Creating your Apple Music playlist..."):
+    with st.spinner("🎧 Building your Apple Music playlist link..."):
         try:
             payload = {
-                "user_token": user_token,
-                "storefront": "us",  # adjust if needed
                 "vibe": vibe,
+                "track_ids": track_ids,
                 "name": name,
                 "description": description,
-                "track_ids": track_ids,
             }
-            # 🔴 IMPORTANT: use Apple playlist endpoint
-            res = api_post("/apple/playlist", payload)
-            playlist_id = res.get("playlist_id")
-            st.success("✅ Playlist created in your Apple Music library!")
-            if playlist_id:
-                # You can construct a URL if your backend doesn't return one
-                st.caption(f"Playlist ID: {playlist_id}")
+            res = api_post("/playlist", payload)
+            url = res.get("url")
+            if url:
+                st.success("✅ Playlist link created!")
+                st.link_button("🎵 Open in Apple Music", url)
+            else:
+                st.warning("Playlist created, but backend did not return a URL.")
         except Exception as e:
             st.error(f"❌ Playlist creation failed: {e}")
 
 
 # ------------------ Main App ------------------
-
 def main():
     header()
     vibe, limit = vibe_controls()
