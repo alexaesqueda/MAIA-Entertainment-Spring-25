@@ -345,7 +345,7 @@ def tracks_table():
     if not tracks:
         st.markdown(
             """
-            <p style='color:#fae298; font-size:1.1rem;'>
+            <p style='color:#e5e7ff !important; font-size:1.1rem;'>
                 🎵 No tracks yet. Click <b>RECOMMEND TRACKS</b> above.
             </p>
             """,
