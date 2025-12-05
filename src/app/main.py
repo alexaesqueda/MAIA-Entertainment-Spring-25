@@ -1,5 +1,5 @@
 # src/app/main.py
-
+import os
 from typing import List, Optional, Dict, Any
 
 from fastapi import FastAPI, HTTPException
