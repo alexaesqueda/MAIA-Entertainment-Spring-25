@@ -343,7 +343,14 @@ def recommend_action(vibe: str, limit: int):
 def tracks_table():
     tracks = st.session_state.rec_tracks or []
     if not tracks:
-        st.info("🎵 No tracks yet. Click **RECOMMEND TRACKS** above.")
+        st.markdown(
+            """
+            <p style='color:#fae298; font-size:1.1rem;'>
+                🎵 No tracks yet. Click <b>RECOMMEND TRACKS</b> above.
+            </p>
+            """,
+            unsafe_allow_html=True,
+        )
         return
 
     st.subheader("3) Review & pick tracks")
