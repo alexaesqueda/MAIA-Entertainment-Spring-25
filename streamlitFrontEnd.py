@@ -103,7 +103,7 @@ st.markdown(
         padding: 0.6rem 1.5rem;
         font-weight: 600;
         border: 2px solid #667eea;
-        background: rgba(102, 126, 234, 0.6);
+        background: rgba(102, 126, 234, 0.1);
         color: #667eea !important;
         font-size: 1rem;
         transition: all 0.3s ease;
