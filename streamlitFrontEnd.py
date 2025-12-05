@@ -403,7 +403,7 @@ def tracks_table():
             image_tag = f'<img src="{image_url}" width="60" style="border-radius: 8px;">' if image_url else ''
             
             # 2. HTML Card (ALL ON ONE LINE to prevent "Black Box" code blocks)
-            card_html = f"<div class='card' style='display: flex; align-items: center; gap: 15px; margin-bottom: 10px; padding: 10px; border-radius: 10px; background-color: rgba(102, 126, 234, 0.1); border: 1px solid rgba(102, 126, 234, 0.3); color: #e5e7ff;'>{image_tag}<div style='flex-grow: 1;'><div style='font-size: 1.1rem; font-weight: 700; color: #ffffff;'>{title}</div><div style='font-size: 0.95rem; color: #e5e7ff;'>{artist}</div><div style='font-size: 0.8rem; color: #c7d0e3;'>{album}</div></div></div>"
+            card_html = f"<div class='card' style='display: flex; align-items: center; gap: 15px; margin-bottom: 10px; padding: 10px; border-radius: 10px; background-color: rgba(102, 126, 234, 0.3); border: 1px solid rgba(102, 126, 234, 0.3); color: #e5e7ff;'>{image_tag}<div style='flex-grow: 1;'><div style='font-size: 1.1rem; font-weight: 700; color: #ffffff;'>{title}</div><div style='font-size: 0.95rem; color: #e5e7ff;'>{artist}</div><div style='font-size: 0.8rem; color: #c7d0e3;'>{album}</div></div></div>"
             
             # 3. Render
             st.markdown(card_html, unsafe_allow_html=True)
