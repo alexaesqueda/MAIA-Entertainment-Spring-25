@@ -3,6 +3,7 @@
 import io
 import math
 import tempfile
+import os
 from typing import Dict, Any, Optional
 
 import httpx
