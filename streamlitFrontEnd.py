@@ -509,35 +509,39 @@ def create_playlist_block(vibe: str):
 # ------------------ Main App ------------------
 def login_screen():
     """
-    The landing page. Forces user to log in before seeing the app.
+    The landing page. Redirects user to the Backend Auth Page.
     """
-    # Center the logo and button using columns
     _, col, _ = st.columns([0.2, 0.6, 0.2])
     
     with col:
-        st.image("stanzalogo.png", width=300) # Bigger logo for splash screen
+        st.image("stanzalogo.png", width=300)
         st.markdown(
             """
-            <h1 style='text-align: center; color: white;'>Welcome to Stanza</h1>
+            <h1 style='text-align: center; color: white;'>Stanza</h1>
             <p style='text-align: center; color: #e5e7ff; font-size: 1.1rem; margin-bottom: 30px;'>
-                Task-based music recommendations seeded by real student musicians.<br>
-                <b>Please log in with Apple Music to continue.</b>
+                Task-based music recommendations seeded by real student musicians.
             </p>
             """, 
             unsafe_allow_html=True
         )
         
-        # Fetch Developer Token for the Login Button
-        try:
-            resp = api_get("/apple/token")
-            dev_token = resp.get("token")
-            if dev_token:
-                # Show the seamless login button
-                apple_login_component(dev_token)
-            else:
-                st.error("⚠️ System Error: Could not load Apple Music configuration.")
-        except Exception:
-            st.error("⚠️ Connecting to Stanza server...")
+        # 👇 THE NEW LOGIN BUTTON (It's just a link now!)
+        # Replace this URL with your actual Render Backend URL
+        AUTH_URL = "https://maia-entertainment-spring-25.onrender.com/apple/auth"
+        
+        st.markdown(
+            f"""
+            <div style="text-align: center;">
+                <a href="{AUTH_URL}" target="_self" style="
+                    background-color: #FA2D48; color: white; text-decoration: none;
+                    padding: 15px 30px; border-radius: 10px; font-weight: bold; font-size: 18px;
+                    display: inline-block; box-shadow: 0 4px 12px rgba(250, 45, 72, 0.4);">
+                     Login with Apple Music
+                </a>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
 def main_app():
     """
