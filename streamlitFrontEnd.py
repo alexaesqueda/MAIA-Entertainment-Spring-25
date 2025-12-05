@@ -274,7 +274,7 @@ def header():
         st.session_state.apple_user_token = token
 
     st.markdown(
-        "<div style='height:2px; background:linear-gradient(90deg, transparent, #667eea, transparent); margin:0rem 0;'></div>",
+        "<div style='height:2px; background:linear-gradient(90deg, transparent, #667eea, transparent); margin:-2rem 0;'></div>",
         unsafe_allow_html=True,
     )
 
