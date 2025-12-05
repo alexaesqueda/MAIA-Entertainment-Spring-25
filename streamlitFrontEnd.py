@@ -212,7 +212,7 @@ def api_get(path: str, params: dict | None = None, timeout: int = 20):
         raise RuntimeError(f"GET {path} failed: {r.status_code} {r.text}")
     return r.json()
 
-def api_post(path: str, payload: dict, timeout: int = 30):
+def api_post(path: str, payload: dict, timeout: int = 120):
     url = f"{BACKEND_BASE_URL}{path}"
     r = requests.post(url, json=payload, timeout=timeout)
     if r.status_code >= 400:
