@@ -400,30 +400,33 @@ def tracks_table():
                 st.session_state.selected_ids.discard(tid)
 
         with col2:
-            # 1. NEW: Render the rich HTML card (Image + Title + Artist + Album)
-            # Ensure 'image_url' variable exists (default to None or empty string if missing)
+            # 1. Prepare Image Tag (ternary operator)
             image_tag = f'<img src="{image_url}" width="60" style="border-radius: 8px;">' if image_url else ''
             
+            # 2. HTML Card 
+            # ⚠️ CRITICAL: The HTML string below must be flushed to the FAR LEFT.
+            # Do not indent the lines starting with <div...
             card_html = f"""
-            <div class='card' style='display: flex; align-items: center; gap: 15px; margin-bottom: 10px;'>
-                {image_tag}
-                <div style='flex-grow: 1;'> <div style='font-size: 1.1rem; font-weight: 700; color: #333;'>{title}</div>
-                    <div style='font-size: 0.95rem; color: #666;'>{artist}</div>
-                    <div style='font-size: 0.8rem; color: #999;'>{album}</div>
-                </div>
-            </div>
-            """
+<div class='card' style='display: flex; align-items: center; gap: 15px; margin-bottom: 10px; padding: 10px; border-radius: 10px; background-color: #ffffff; color: #333;'>
+    {image_tag}
+    <div style='flex-grow: 1;'>
+        <div style='font-size: 1.1rem; font-weight: 700; color: #333;'>{title}</div>
+        <div style='font-size: 0.95rem; color: #666;'>{artist}</div>
+        <div style='font-size: 0.8rem; color: #999;'>{album}</div>
+    </div>
+</div>
+"""
             st.markdown(card_html, unsafe_allow_html=True)
-        
-            # 2. EXISTING: Metrics (Caption)
+
+            # 3. EXISTING: Metrics
             if metrics:
                 st.caption(" • ".join(metrics))
-        
-            # 3. EXISTING: Audio Player
+
+            # 4. EXISTING: Audio
             if preview:
                 st.audio(preview, format="audio/mp3")
-        
-            # 4. EXISTING: Apple Music Link
+
+            # 5. EXISTING: Link
             if link:
                 st.markdown(
                     f"<a href='{link}' target='_blank' style='text-decoration: none; color: #FA2D48; font-weight: bold;'>🎵 Open in Apple Music</a>",
