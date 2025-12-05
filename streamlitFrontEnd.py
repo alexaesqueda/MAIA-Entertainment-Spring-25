@@ -68,7 +68,7 @@ PAGE_ICON = "🎵"
 st.set_page_config(page_title="Stanza", page_icon=PAGE_ICON, layout="wide")
 
 # ------------------ Styling ------------------
-n(
+st.markdown(
     """
     <style>
       .stApp {
