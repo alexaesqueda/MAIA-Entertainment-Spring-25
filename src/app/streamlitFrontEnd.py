@@ -317,32 +317,36 @@ def header():
 
     # 3. The Right Side (Login Button) - UPDATE THIS PART
     with right:
-        st.markdown("### Apple Music Login")
-        
-        # A. Get Developer Token from Backend
-        try:
-            resp = api_get("/apple/token")
-            dev_token = resp.get("token")
-        except:
-            dev_token = None
-        
-        # B. Show Login Button (if token exists)
-        if dev_token:
-            apple_login_component(dev_token)
-            
-        # C. Input box (so they can paste the token if needed)
-        token = st.text_input(
-            "Paste User Token Here", 
-            value=st.session_state.apple_user_token,
-            type="password"
-        )
-        st.session_state.apple_user_token = token
+        # --- 1. CHECK FOR TOKEN IN URL (The Seamless Part) ---
+        # If the page just reloaded with ?token=..., grab it!
+        query_params = st.query_params
+        if "token" in query_params:
+            # Save to session state
+            st.session_state.apple_user_token = query_params["token"]
+            # Clear the URL so the token doesn't stay visible
+            st.query_params.clear()
+            st.rerun()
 
-    # 4. Divider Line (Keep this at the end)
-    st.markdown(
-        "<div style='height:2px; background:linear-gradient(90deg, transparent, #667eea, transparent); margin:2rem 0;'></div>",
-        unsafe_allow_html=True,
-    )
+        # --- 2. SHOW UI BASED ON STATUS ---
+        if st.session_state.apple_user_token:
+            # USER IS LOGGED IN
+            st.success("✅ Connected to Apple Music")
+            if st.button("🚪 Logout", type="secondary"):
+                st.session_state.apple_user_token = ""
+                st.rerun()
+        else:
+            # USER IS NOT LOGGED IN -> Show Login Button
+            try:
+                # Get dev token for the component
+                resp = api_get("/apple/token")
+                dev_token = resp.get("token")
+                
+                if dev_token:
+                    apple_login_component(dev_token)
+                else:
+                    st.error("Backend connection failed.")
+            except Exception:
+                st.error("Connecting to backend...")
 
 def vibe_controls():
     st.subheader("1) Choose your vibe (task)")
