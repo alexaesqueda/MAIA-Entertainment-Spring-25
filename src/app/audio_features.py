@@ -2,6 +2,7 @@
 
 import io
 import math
+import tempfile
 from typing import Dict, Any, Optional
 
 import httpx
@@ -59,23 +60,35 @@ def _estimate_danceability_like(y: np.ndarray, sr: int) -> float:
 def extract_features_from_audio_bytes(audio_bytes: bytes, sr: int = 22050) -> Optional[Dict[str, Any]]:
     """
     Decode raw audio bytes (MP3/M4A/etc.) and extract a feature dict.
+    Updated to use a temporary file to support M4A/AAC decoding.
     """
+    # Create a temporary file to hold the audio data
+    # We use a suffix like .m4a so librosa knows what format to expect
+    with tempfile.NamedTemporaryFile(suffix=".m4a", delete=False) as tmp_file:
+        tmp_file.write(audio_bytes)
+        tmp_file_path = tmp_file.name
+
     try:
-        y, sr = librosa.load(io.BytesIO(audio_bytes), sr=sr, mono=True)
+        # Load from the FILE PATH, not the memory buffer
+        y, sr = librosa.load(tmp_file_path, sr=sr, mono=True)
     except Exception as e:
         print("Failed to decode audio bytes:", repr(e))
         return None
+    finally:
+        # Clean up: remove the temp file to save space
+        if os.path.exists(tmp_file_path):
+            os.remove(tmp_file_path)
 
     if y.size < sr:
         return None
 
+    # ... (Keep the rest of your feature extraction logic below) ...
     tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
     energy = _estimate_energy(y)
     valence = _estimate_valence_like(y, sr)
     acousticness = _estimate_acousticness_like(y, sr)
     danceability = _estimate_danceability_like(y, sr)
-
-    # placeholder instrumentalness (0 → no special handling yet)
+    
     instrumentalness = 0.0
 
     return {
