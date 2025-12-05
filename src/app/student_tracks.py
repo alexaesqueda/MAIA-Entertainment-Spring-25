@@ -20,7 +20,7 @@ STUDENT_TRACKS: List[Dict[str, Any]] = [
         "title": "Takes a While",
         "artist": "Alexine Sakkers",
         "vibe": "focus",
-        "audio_url": "https://drive.google.com/uc?export=download&id=11DTWdZNWDLgpPjhxGC5XssqBS0cog5t6",
+        "audio_url": "https://storage.googleapis.com/song1_stanza/Alexine%20-%20takes%20a%20while%20(Lyric%20Video).mp3",
     },
     {
         "id": "student_creative_1",
