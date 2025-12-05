@@ -404,35 +404,19 @@ def tracks_table():
             # 1. Prepare Image Tag
             image_tag = f'<img src="{image_url}" width="60" style="border-radius: 8px;">' if image_url else ''
             
-            # 2. Use textwrap.dedent to strip the indentation automatically
-            card_html = textwrap.dedent(f"""
-                <div class='card' style='display: flex; align-items: center; gap: 15px; margin-bottom: 10px; padding: 10px; border-radius: 10px; background-color: #ffffff; color: #333;'>
-                    {image_tag}
-                    <div style='flex-grow: 1;'>
-                        <div style='font-size: 1.1rem; font-weight: 700; color: #333;'>{title}</div>
-                        <div style='font-size: 0.95rem; color: #666;'>{artist}</div>
-                        <div style='font-size: 0.8rem; color: #999;'>{album}</div>
-                    </div>
-                </div>
-            """)
+            # 2. HTML Card (ALL ON ONE LINE to prevent "Black Box" code blocks)
+            card_html = f"<div class='card' style='display: flex; align-items: center; gap: 15px; margin-bottom: 10px; padding: 10px; border-radius: 10px; background-color: #ffffff; color: #333;'>{image_tag}<div style='flex-grow: 1;'><div style='font-size: 1.1rem; font-weight: 700; color: #333;'>{title}</div><div style='font-size: 0.95rem; color: #666;'>{artist}</div><div style='font-size: 0.8rem; color: #999;'>{album}</div></div></div>"
             
-            # Render the HTML
+            # 3. Render
             st.markdown(card_html, unsafe_allow_html=True)
 
-            # 3. EXISTING: Metrics
+            # ... (keep existing metrics/audio/link logic below) ...
             if metrics:
                 st.caption(" • ".join(metrics))
-
-            # 4. EXISTING: Audio
             if preview:
                 st.audio(preview, format="audio/mp3")
-
-            # 5. EXISTING: Link
             if link:
-                st.markdown(
-                    f"<a href='{link}' target='_blank' style='text-decoration: none; color: #FA2D48; font-weight: bold;'>🎵 Open in Apple Music</a>",
-                    unsafe_allow_html=True,
-                )
+                st.markdown(f"<a href='{link}' target='_blank' style='text-decoration: none; color: #FA2D48; font-weight: bold;'>🎵 Open in Apple Music</a>", unsafe_allow_html=True)
 
 
 def create_playlist_block(vibe: str):
