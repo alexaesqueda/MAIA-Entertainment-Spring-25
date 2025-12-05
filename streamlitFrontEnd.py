@@ -234,7 +234,7 @@ def fetch_vibes():
 # ------------------ UI Blocks ------------------
 
 def header():
-    left_pad, left, right = st.columns([0.1, 0.5, 0.24])
+    left_pad, left, right = st.columns([0.1, 0.1, 0.24])
 
     with left:
         st.image(PAGE_TITLE, width=200)
