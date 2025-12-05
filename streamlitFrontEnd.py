@@ -236,7 +236,14 @@ def header():
     left_pad, left, right = st.columns([0.1, 0.6, 0.3])
 
     with left:
-        st.image(PAGE_TITLE, width=200)
+        st.markdown(
+            f"""
+            <div style='text-align:center; margin-top:-50px; margin-bottom:-30px;'>
+                <img src='data:image/webp;base64,{{}}' style='max-width:300px;'/>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         st.markdown(
             """
             <p style='font-size:1.2rem; color:#e5e7ff; text-align:left; margin-top:-10px;'>
