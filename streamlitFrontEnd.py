@@ -283,49 +283,50 @@ def fetch_vibes():
 # ------------------ UI Blocks ------------------
 
 def header():
-    left_pad, left, right = st.columns([0.01, 0.7, 0.24])
+    # 1. Define the columns (Keep this at the top of the function)
+    left_pad, left, right = st.columns([0.1, 0.6, 0.3])
 
+    # 2. The Left Side (Title/Logo) - KEEP THIS AS IS
     with left:
-        st.image(PAGE_TITLE, width=200)
+        # (This is where your Logo or Title code is)
+        st.image("stanzalogo.png", width=200) 
         st.markdown(
-            """
-            <p style='font-size:1.2rem; color:#e5e7ff; text-align:center; margin-top:-10px;margin-left:330px;'>
+            f"""
+            <p style='font-size:1.2rem; color:#e5e7ff; text-align:center; margin-top:-10px;'>
                 ✨ Task-based Apple Music recommendations, seeded by real student musicians.
             </p>
             """,
             unsafe_allow_html=True,
         )
 
+    # 3. The Right Side (Login Button) - UPDATE THIS PART
     with right:
-        # Apple Music user token input (for playlist creation)
-        st.markdown(
-            """
-            <div style='padding:8px 12px; margin-bottom:6px;
-                background:rgba(15, 23, 42, 0.65);
-                border-radius:12px; color:#e5e7ff;
-                border:1px solid rgba(148, 163, 184, 0.4);'>
-                <div style='font-size:0.85rem; font-weight:600;'>Apple Music User Token</div>
-                <div style='font-size:0.75rem; opacity:0.85;'>
-                    Required only to save playlists to your Apple Music library.<br>
-                    You can still get recommendations without it.
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.markdown("### Apple Music Login")
+        
+        # A. Get Developer Token from Backend
+        try:
+            resp = api_get("/apple/token")
+            dev_token = resp.get("token")
+        except:
+            dev_token = None
+        
+        # B. Show Login Button (if token exists)
+        if dev_token:
+            apple_login_component(dev_token)
+            
+        # C. Input box (so they can paste the token if needed)
         token = st.text_input(
-            "Paste your Apple Music user token",
+            "Paste User Token Here", 
             value=st.session_state.apple_user_token,
-            type="password",
-            label_visibility="collapsed",
+            type="password"
         )
         st.session_state.apple_user_token = token
 
+    # 4. Divider Line (Keep this at the end)
     st.markdown(
         "<div style='height:2px; background:linear-gradient(90deg, transparent, #667eea, transparent); margin:2rem 0;'></div>",
         unsafe_allow_html=True,
     )
-
 
 def vibe_controls():
     st.subheader("1) Choose your vibe (task)")
