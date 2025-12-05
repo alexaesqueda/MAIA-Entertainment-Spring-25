@@ -70,7 +70,7 @@ def search_tracks_for_vibe(
     params = {
         "term": query,
         "types": "songs",
-        "limit": min(max(limit, 1), 50),
+        "limit": min(max(limit, 1), 25),
     }
 
     url = f"{APPLE_MUSIC_BASE_URL}/v1/catalog/{storefront}/search"
