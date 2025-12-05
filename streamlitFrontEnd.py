@@ -68,7 +68,7 @@ PAGE_ICON = "🎵"
 st.set_page_config(page_title="Stanza", page_icon=PAGE_ICON, layout="wide")
 
 # ------------------ Styling ------------------
-st.markdown(
+n(
     """
     <style>
       .stApp {
@@ -239,7 +239,7 @@ def header():
         st.image(PAGE_TITLE, use_container_width=True)
         st.markdown(
             """
-            <p style='font-size:1.2rem; color:#e5e7ff; text-align:center; margin-top:-10px;'>
+            <p style='font-size:0.1rem; color:#e5e7ff; text-align:center; margin-top:-10px;'>
                 ✨ Task-based Apple Music recommendations, seeded by real student musicians.
             </p>
             """,
