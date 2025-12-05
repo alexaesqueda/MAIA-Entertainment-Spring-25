@@ -10,6 +10,8 @@ from pydantic import BaseModel
 from .apple import recommend_tracks_for_vibe, create_library_playlist
 from .student_tracks import list_vibes  # your existing student_vibes/student_tracks helper
 from src.app.apple_music import generate_developer_token
+from fastapi.responses import HTMLResponse
+from src.app.apple_music import generate_developer_token
 
 # ---------- Create app ----------
 
@@ -52,6 +54,88 @@ def get_apple_token():
     """Returns a fresh developer token for the frontend to use."""
     token = generate_developer_token()
     return {"token": token}
+
+@app.get("/apple/auth", response_class=HTMLResponse)
+def apple_auth_page():
+    """
+    Serves a dedicated login page to bypass iframe security restrictions.
+    """
+    dev_token = generate_developer_token()
+    
+    # ⚠️ REPLACE THIS with your exact Streamlit URL (must match Apple Developer Portal)
+    RETURN_URL = "https://maia-entertainment-spring-25-mjyvcu5rn85he4zotwjzdh.streamlit.app/"
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Login to Stanza</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script src="https://js-cdn.music.apple.com/musickit/v1/musickit.js"></script>
+        <style>
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+                background: linear-gradient(179deg, #0f1015 10%, #5568d3, #6a3f8f 100%);
+                color: white; display: flex; flex-direction: column;
+                align-items: center; justify-content: center; height: 100vh; margin: 0;
+            }}
+            button {{
+                background-color: #FA2D48; color: white; border: none;
+                padding: 15px 30px; border-radius: 12px; font-size: 18px; font-weight: 600;
+                cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                transition: transform 0.2s;
+            }}
+            button:hover {{ transform: scale(1.05); }}
+            .card {{
+                background: rgba(255,255,255,0.1); padding: 40px; border-radius: 20px;
+                text-align: center; backdrop-filter: blur(10px);
+                border: 1px solid rgba(255,255,255,0.2);
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <h1>🎵 Stanza Login</h1>
+            <p>Please authorize Apple Music to continue.</p>
+            <br>
+            <button id="login-btn">Login with Apple Music</button>
+            <p id="status" style="margin-top:20px; font-size:14px; opacity:0.8;"></p>
+        </div>
+
+        <script>
+            // 1. Initialize MusicKit
+            document.addEventListener('musickitloaded', function() {{
+                try {{
+                    MusicKit.configure({{
+                        developerToken: '{dev_token}',
+                        app: {{ name: 'Stanza', build: '1.0.0' }}
+                    }});
+                }} catch (err) {{
+                    document.getElementById('status').innerText = "Config Error: " + err;
+                }}
+            }});
+
+            // 2. Handle Login Click
+            document.getElementById('login-btn').addEventListener('click', async function() {{
+                const music = MusicKit.getInstance();
+                try {{
+                    // Authorize (Opens Popup)
+                    const token = await music.authorize();
+                    
+                    // Success! Redirect back to Streamlit
+                    document.getElementById('status').innerText = "✅ Success! Redirecting...";
+                    window.location.href = "{RETURN_URL}?token=" + encodeURIComponent(token);
+                    
+                }} catch (err) {{
+                    document.getElementById('status').innerText = "❌ Error: " + err;
+                }}
+            }});
+        </script>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content, status_code=200)
 # ---------- Pydantic models for Apple endpoints ----------
 
 class AppleRecommendIn(BaseModel):
