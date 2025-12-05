@@ -239,7 +239,7 @@ def header():
         st.image(PAGE_TITLE, use_container_width=True)
         st.markdown(
             """
-            <p style='font-size:0.1rem; color:#e5e7ff; text-align:center; margin-top:-10px;'>
+            <p style='font-size:1rem; color:#e5e7ff; text-align:center; margin-top:-10px;'>
                 ✨ Task-based Apple Music recommendations, seeded by real student musicians.
             </p>
             """,
