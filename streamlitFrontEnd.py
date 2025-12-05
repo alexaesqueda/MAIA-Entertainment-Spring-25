@@ -352,14 +352,17 @@ def tracks_table():
 
     c1, c2, _ = st.columns([0.2, 0.2, 0.6])
     with c1:
-        if st.button("✅ SELECT ALL", key="btn_select_all"):
-            all_ids = set(t.get("id") for t in tracks if t.get("id"))
-            st.session_state.selected_ids = all_ids
-            st.rerun()
+        select_all = st.button("✅ SELECT ALL", key="btn_select_all")
     with c2:
-        if st.button("❌ CLEAR ALL", key="btn_clear_all"):
-            st.session_state.selected_ids = set()
-            st.rerun()
+        clear_all = st.button("❌ CLEAR ALL", key="btn_clear_all")
+    
+    if select_all:
+        st.session_state.selected_ids = set(t.get("id") for t in tracks if t.get("id"))
+        st.rerun()
+    
+    if clear_all:
+        st.session_state.selected_ids = set()
+        st.rerun()
 
     for idx, t in enumerate(tracks, start=1):
         tid = t.get("id")
