@@ -62,7 +62,7 @@ BACKEND_BASE_URL = os.getenv(
     "https://maia-entertainment-spring-25.onrender.com"
 ).rstrip("/")
 
-PAGE_TITLE = "StanzaLogoFinal.webp"
+PAGE_TITLE = "stanzavector.svg"
 PAGE_ICON = "🎵"
 
 st.set_page_config(page_title="Stanza", page_icon=PAGE_ICON, layout="wide")
