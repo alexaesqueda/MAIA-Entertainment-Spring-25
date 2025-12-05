@@ -118,3 +118,10 @@ def apple_playlist(body: ApplePlaylistIn):
         raise HTTPException(status_code=500, detail="Failed to create playlist in Apple Music")
 
     return ApplePlaylistOut(ok=True, playlist_id=playlist_id)
+
+@app.get("/__whoami")
+def whoami():
+    return {
+        "title": app.title,
+        "routes": [r.path for r in app.routes],
+    }
