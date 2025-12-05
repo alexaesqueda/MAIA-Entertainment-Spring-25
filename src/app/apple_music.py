@@ -5,8 +5,8 @@ import httpx
 from typing import Dict, Any, List, Optional
 import base64
 
-APPLE_MUSIC_KEY_ID = os.getenv("APPLE_MUSIC_KEY_ID")       # from Apple dev portal
-APPLE_MUSIC_TEAM_ID = os.getenv("APPLE_MUSIC_TEAM_ID")     # from Apple dev portal
+APPLE_MUSIC_KEY_ID = os.getenv("APPLE_MUSIC_KEY_ID").strip()       # from Apple dev portal
+APPLE_MUSIC_TEAM_ID = os.getenv("APPLE_MUSIC_TEAM_ID").strip()     # from Apple dev portal
 APPLE_MUSIC_PRIVATE_KEY = os.getenv("APPLE_MUSIC_PRIVATE_KEY_B64")  # PEM string or path
 APPLE_MUSIC_STORE_FRONT = os.getenv("APPLE_MUSIC_STORE_FRONT", "us")
 
