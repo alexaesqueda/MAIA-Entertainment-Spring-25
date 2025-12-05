@@ -374,7 +374,7 @@ def tracks_table():
         
         preview = t.get("preview_url")
         link = t.get("apple_music_url")
-        )
+        
         preview = t.get("preview_url")
         link = t.get("apple_music_url") or t.get("apple_url") or t.get("external_url")
 
