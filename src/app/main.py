@@ -223,13 +223,16 @@ def apple_recommend(body: AppleRecommendIn):
 
 @app.post("/apple/playlist", response_model=ApplePlaylistOut)
 def apple_playlist(body: ApplePlaylistIn):
+    # 1. Validation Checks
     if not body.user_token:
         raise HTTPException(status_code=400, detail="Apple Music user_token is required to create a playlist.")
 
     if not body.track_ids:
         raise HTTPException(status_code=400, detail="No track_ids provided.")
 
-    playlist_id = create_library_playlist(
+    # 2. Call the updated helper function
+    # It now returns a dictionary: {"id": "...", "url": "..."}
+    result = create_library_playlist(
         user_token=body.user_token,
         storefront=body.storefront,
         name=body.name,
@@ -237,7 +240,13 @@ def apple_playlist(body: ApplePlaylistIn):
         track_ids=body.track_ids,
     )
 
-    if not playlist_id:
+    # 3. Handle Failure
+    if not result or not result.get("id"):
         raise HTTPException(status_code=500, detail="Failed to create playlist in Apple Music")
 
-    return ApplePlaylistOut(ok=True, playlist_id=playlist_id)
+    # 4. Return Success Response with ID and URL
+    return ApplePlaylistOut(
+        ok=True, 
+        playlist_id=result["id"], 
+        playlist_url=result.get("url")
+    )
