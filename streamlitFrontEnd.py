@@ -298,37 +298,7 @@ def fetch_vibes():
 
 # ------------------ UI Blocks ------------------
 
-def login_screen():
-    """
-    The landing page. Forces user to log in before seeing the app.
-    """
-    # Center the logo and button using columns
-    _, col, _ = st.columns([0.2, 0.6, 0.2])
-    
-    with col:
-        st.image("stanzalogo.png", width=300) # Bigger logo for splash screen
-        st.markdown(
-            """
-            <h1 style='text-align: center; color: white;'>Welcome to Stanza</h1>
-            <p style='text-align: center; color: #e5e7ff; font-size: 1.1rem; margin-bottom: 30px;'>
-                Task-based music recommendations seeded by real student musicians.<br>
-                <b>Please log in with Apple Music to continue.</b>
-            </p>
-            """, 
-            unsafe_allow_html=True
-        )
-        
-        # Fetch Developer Token for the Login Button
-        try:
-            resp = api_get("/apple/token")
-            dev_token = resp.get("token")
-            if dev_token:
-                # Show the seamless login button
-                apple_login_component(dev_token)
-            else:
-                st.error("⚠️ System Error: Could not load Apple Music configuration.")
-        except Exception:
-            st.error("⚠️ Connecting to Stanza server...")
+
 
 def vibe_controls():
     st.subheader("1) Choose your vibe (task)")
@@ -537,14 +507,77 @@ def create_playlist_block(vibe: str):
 
 
 # ------------------ Main App ------------------
+def login_screen():
+    """
+    The landing page. Forces user to log in before seeing the app.
+    """
+    # Center the logo and button using columns
+    _, col, _ = st.columns([0.2, 0.6, 0.2])
+    
+    with col:
+        st.image("stanzalogo.png", width=300) # Bigger logo for splash screen
+        st.markdown(
+            """
+            <h1 style='text-align: center; color: white;'>Welcome to Stanza</h1>
+            <p style='text-align: center; color: #e5e7ff; font-size: 1.1rem; margin-bottom: 30px;'>
+                Task-based music recommendations seeded by real student musicians.<br>
+                <b>Please log in with Apple Music to continue.</b>
+            </p>
+            """, 
+            unsafe_allow_html=True
+        )
+        
+        # Fetch Developer Token for the Login Button
+        try:
+            resp = api_get("/apple/token")
+            dev_token = resp.get("token")
+            if dev_token:
+                # Show the seamless login button
+                apple_login_component(dev_token)
+            else:
+                st.error("⚠️ System Error: Could not load Apple Music configuration.")
+        except Exception:
+            st.error("⚠️ Connecting to Stanza server...")
 
-def main():
-    header()
+def main_app():
+    """
+    The actual application, only visible after login.
+    """
+    # 1. Mini Header (Logo + Logout)
+    c1, c2 = st.columns([0.8, 0.2])
+    with c1:
+        st.image("stanzalogo.png", width=150)
+    with c2:
+        if st.button("🚪 Logout", type="secondary", use_container_width=True):
+            st.session_state.apple_user_token = ""
+            st.rerun()
+            
+    st.divider()
+
+    # 2. Your Existing Logic
+    # (These are the functions you already wrote)
     vibe, limit = vibe_controls()
     recommend_action(vibe, limit)
     tracks_table()
     create_playlist_block(vibe)
 
+def main():
+    # --- STEP A: HANDLE REDIRECT LOGIN (Seamless) ---
+    # If the JS component reloaded the page with ?token=..., capture it now.
+    query_params = st.query_params
+    if "token" in query_params:
+        st.session_state.apple_user_token = query_params["token"]
+        st.query_params.clear()
+        st.rerun()
 
+    # --- STEP B: ROUTING ---
+    if st.session_state.apple_user_token:
+        # User has a token -> Show the App
+        main_app()
+    else:
+        # User has NO token -> Show Login Screen
+        login_screen()
+
+# Run the app
 if __name__ == "__main__":
     main()
