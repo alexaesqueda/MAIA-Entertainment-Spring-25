@@ -233,7 +233,7 @@ def fetch_vibes():
 # ------------------ UI Blocks ------------------
 
 def header():
-    left_pad, left, right = st.columns([0.1, 0.1, 0.3])
+    left_pad, left, right = st.columns([0.1, 1.6, 0.3])
 
     with left:
         st.markdown("<div style='margin-top:-150px;'></div>", unsafe_allow_html=True)
