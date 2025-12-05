@@ -9,7 +9,7 @@ from pydantic import BaseModel
 # Apple logic lives here:
 from .apple import recommend_tracks_for_vibe, create_library_playlist
 from .student_tracks import list_vibes  # your existing student_vibes/student_tracks helper
-
+from src.app.apple_music import generate_developer_token
 
 # ---------- Create app ----------
 
@@ -47,7 +47,11 @@ def get_vibes():
     vibes = list_vibes()
     return {"vibes": vibes}
 
-
+@app.get("/apple/token")
+def get_apple_token():
+    """Returns a fresh developer token for the frontend to use."""
+    token = generate_developer_token()
+    return {"token": token}
 # ---------- Pydantic models for Apple endpoints ----------
 
 class AppleRecommendIn(BaseModel):
