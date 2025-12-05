@@ -56,8 +56,13 @@ import requests
 import streamlit as st
 from dotenv import load_dotenv
 import streamlit.components.v1 as components
+import streamlit as st  # Ensure this is imported
 
 def apple_login_component(developer_token):
+    """
+    Renders the Login button. Upon success, it RELOADS the page 
+    with the token in the URL parameters.
+    """
     html_code = f"""
     <!DOCTYPE html>
     <html>
@@ -67,34 +72,45 @@ def apple_login_component(developer_token):
         <style>
           body {{ font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: transparent; }}
           #login-btn {{
-            background-color: #FA2D48; color: white; border: none; 
-            padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;
+            background: linear-gradient(135deg, #fa2d48 0%, #c81e36 100%);
+            color: white; border: none; padding: 12px 24px;
+            border-radius: 8px; font-weight: 600; font-size: 16px;
+            cursor: pointer; transition: transform 0.2s;
           }}
-          #status {{ margin-top: 10px; font-size: 14px; color: #eee; }}
-          textarea {{ width: 100%; height: 60px; margin-top: 5px; display: none; }}
+          #login-btn:hover {{ transform: scale(1.02); }}
+          .status {{ margin-top: 10px; font-size: 14px; color: #333; }}
         </style>
       </head>
       <body>
-        <button id="login-btn">Login with Apple Music</button>
-        <p id="status"></p>
-        <textarea id="token-box" readonly></textarea>
+        <button id="login-btn"> Login with Apple Music</button>
+        <p id="status" class="status"></p>
 
         <script>
           document.addEventListener('musickitloaded', function() {{
             MusicKit.configure({{
               developerToken: '{developer_token}',
-              app: {{ name: 'Stanza', build: '1.0.0' }}
+              app: {{
+                name: 'Stanza',
+                build: '1.0.0'
+              }}
             }});
           }});
 
           document.getElementById('login-btn').addEventListener('click', async function() {{
             const music = MusicKit.getInstance();
             try {{
+              // 1. Open Popup and Wait for Login
               const token = await music.authorize();
-              document.getElementById('status').innerText = "✅ Success! Copy token below:";
-              const box = document.getElementById('token-box');
-              box.style.display = 'block';
-              box.value = token;
+              
+              // 2. Success! Redirect the parent window to the same URL but WITH the token
+              document.getElementById('status').innerText = "✅ Logged in! Redirecting...";
+              
+              // This grabs the current base URL (e.g. https://yourapp.com/)
+              const currentUrl = window.top.location.href.split('?')[0];
+              
+              // Refresh page with the token attached
+              window.top.location.href = currentUrl + "?token=" + encodeURIComponent(token);
+              
             }} catch (err) {{
               document.getElementById('status').innerText = "❌ Error: " + err;
             }}
@@ -103,7 +119,7 @@ def apple_login_component(developer_token):
       </body>
     </html>
     """
-    components.html(html_code, height=200)
+    components.html(html_code, height=150)
 
 # ------------------ Config ------------------
 load_dotenv(override=True)
