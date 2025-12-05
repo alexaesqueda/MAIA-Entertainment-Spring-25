@@ -204,11 +204,11 @@ def create_library_playlist(
     name: str,
     description: str,
     track_ids: List[str],
-) -> Optional[str]:
+) -> Optional[Dict[str, str]]:  # <--- CHANGED: Returns a Dict or None
     """
     Given an authenticated Apple Music user (via Music-User-Token),
     create a library playlist and add the given Apple Music track IDs.
-    Returns the playlist URL if successful.
+    Returns a dictionary with 'id' and 'url' if successful.
     """
     if not track_ids:
         return None
@@ -227,7 +227,14 @@ def create_library_playlist(
         r.raise_for_status()
         playlist_data = r.json()
 
-    playlist_id = playlist_data.get("data", [{}])[0].get("id")
+    # Extract ID and URL from the response
+    data_item = playlist_data.get("data", [{}])[0]
+    playlist_id = data_item.get("id")
+    
+    # 👇 NEW: Capture the Apple Music URL
+    # This URL (e.g. https://music.apple.com/library/playlist/...) opens the app
+    playlist_url = data_item.get("attributes", {}).get("url")
+
     if not playlist_id:
         return None
 
@@ -241,6 +248,8 @@ def create_library_playlist(
         r = client.post(relationships_url, json=track_payload, headers=apple_auth_headers(user_token))
         r.raise_for_status()
 
-    # A simple web URL to open the playlist in Apple Music is not always directly returned.
-    # We can at least give the user the library playlist id.
-    return playlist_id
+    # 👇 CHANGED: Return both pieces of data
+    return {
+        "id": playlist_id,
+        "url": playlist_url
+    }
