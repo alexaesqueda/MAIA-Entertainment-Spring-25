@@ -62,7 +62,7 @@ def apple_auth_page():
     """
     dev_token = generate_developer_token()
     
-    # ⚠️ REPLACE THIS with your exact Streamlit URL (must match Apple Developer Portal)
+    # ⚠️ CRITICAL: Ensure this matches your Streamlit URL exactly (with https://)
     RETURN_URL = "https://maia-entertainment-spring-25-mjyvcu5rn85he4zotwjzdh.streamlit.app/"
 
     html_content = f"""
@@ -80,31 +80,39 @@ def apple_auth_page():
                 color: white; display: flex; flex-direction: column;
                 align-items: center; justify-content: center; height: 100vh; margin: 0;
             }}
-            button {{
-                background-color: #FA2D48; color: white; border: none;
-                padding: 15px 30px; border-radius: 12px; font-size: 18px; font-weight: 600;
-                cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-                transition: transform 0.2s;
-            }}
-            button:hover {{ transform: scale(1.05); }}
             .card {{
                 background: rgba(255,255,255,0.1); padding: 40px; border-radius: 20px;
                 text-align: center; backdrop-filter: blur(10px);
-                border: 1px solid rgba(255,255,255,0.2);
+                border: 1px solid rgba(255,255,255,0.2); max-width: 400px;
+            }}
+            button {{
+                background-color: #FA2D48; color: white; border: none;
+                padding: 15px 30px; border-radius: 12px; font-size: 18px; font-weight: 600;
+                cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); margin-top: 20px;
+            }}
+            a.manual-link {{
+                color: #10b981; font-weight: bold; text-decoration: underline; 
+                font-size: 18px; display: block; margin-top: 20px;
             }}
         </style>
     </head>
     <body>
         <div class="card">
             <h1>🎵 Stanza Login</h1>
-            <p>Please authorize Apple Music to continue.</p>
-            <br>
+            <p id="instruction">Please authorize Apple Music to continue.</p>
+            
             <button id="login-btn">Login with Apple Music</button>
-            <p id="status" style="margin-top:20px; font-size:14px; opacity:0.8;"></p>
+            
+            <div id="success-container" style="display:none;">
+                <p>✅ Login Successful!</p>
+                <p>Redirecting you back to Stanza...</p>
+                <a id="manual-redirect" class="manual-link" href="#">Click here if not redirected</a>
+            </div>
+            
+            <p id="status" style="margin-top:20px; font-size:14px; opacity:0.8; color: #ff6b6b;"></p>
         </div>
 
         <script>
-            // 1. Initialize MusicKit
             document.addEventListener('musickitloaded', function() {{
                 try {{
                     MusicKit.configure({{
@@ -116,19 +124,31 @@ def apple_auth_page():
                 }}
             }});
 
-            // 2. Handle Login Click
             document.getElementById('login-btn').addEventListener('click', async function() {{
                 const music = MusicKit.getInstance();
                 try {{
-                    // Authorize (Opens Popup)
                     const token = await music.authorize();
                     
-                    // Success! Redirect back to Streamlit
-                    document.getElementById('status').innerText = "✅ Success! Redirecting...";
-                    window.location.href = "{RETURN_URL}?token=" + encodeURIComponent(token);
+                    // 1. Prepare the destination URL
+                    const finalUrl = "{RETURN_URL}?token=" + encodeURIComponent(token);
+                    
+                    // 2. Hide Login Button, Show Success Message & Manual Link
+                    document.getElementById('login-btn').style.display = 'none';
+                    document.getElementById('instruction').style.display = 'none';
+                    
+                    const container = document.getElementById('success-container');
+                    container.style.display = 'block';
+                    
+                    const link = document.getElementById('manual-redirect');
+                    link.href = finalUrl;
+                    
+                    // 3. Attempt Automatic Redirect
+                    console.log("Attempting redirect to:", finalUrl);
+                    window.location.href = finalUrl;
                     
                 }} catch (err) {{
                     document.getElementById('status').innerText = "❌ Error: " + err;
+                    console.error(err);
                 }}
             }});
         </script>
