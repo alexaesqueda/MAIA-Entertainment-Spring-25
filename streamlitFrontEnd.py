@@ -251,7 +251,7 @@ def header():
         # Apple Music user token input (for playlist creation)
         st.markdown(
             """
-            <div style='padding:8px 12px; margin-bottom:6px;
+            <div style='padding:8px 12px; margin-bottom:0px; margin-right:0px;
                 background:rgba(15, 23, 42, 0.65);
                 border-radius:12px; color:#e5e7ff;
                 border:1px solid rgba(148, 163, 184, 0.4);'>
