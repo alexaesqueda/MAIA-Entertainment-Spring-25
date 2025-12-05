@@ -237,7 +237,7 @@ def header():
 
     with left:
         st.markdown("<div style='margin-top:-150px;'></div>", unsafe_allow_html=True)
-        st.image(PAGE_TITLE, width=200)
+        st.image(PAGE_TITLE, width=100)
         st.markdown("<div style='margin-top:-150px;'></div>", unsafe_allow_html=True)
         st.markdown(
             """
