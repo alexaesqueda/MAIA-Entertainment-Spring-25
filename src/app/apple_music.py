@@ -3,6 +3,7 @@ import time
 import jwt  # PyJWT
 import httpx
 from typing import Dict, Any, List, Optional
+import base64
 
 APPLE_MUSIC_KEY_ID = os.getenv("APPLE_MUSIC_KEY_ID")       # from Apple dev portal
 APPLE_MUSIC_TEAM_ID = os.getenv("APPLE_MUSIC_TEAM_ID")     # from Apple dev portal
@@ -12,21 +13,33 @@ APPLE_MUSIC_STORE_FRONT = os.getenv("APPLE_MUSIC_STORE_FRONT", "us")
 APPLE_MUSIC_API = "https://api.music.apple.com/v1"
 
 
-def _load_private_key() -> str:
-    """
-    Load your Apple Music private key.
-    Easiest: store the full PEM as an env var APPLE_MUSIC_PRIVATE_KEY.
+# --- Change in apple_music.py ---
 
-    Or, if you store it in a file, read that here.
-    """
-    pk = APPLE_MUSIC_PRIVATE_KEY
-    if pk and "BEGIN PRIVATE KEY" in pk:
-        return pk
-    # else treat as a path (optional)
-    if pk and os.path.exists(pk):
-        with open(pk, "r") as f:
-            return f.read()
-    raise RuntimeError("APPLE_MUSIC_PRIVATE_KEY is not set correctly.")
+def _load_private_key() -> str:
+    # 1. Try to load the Base64 encoded key first
+    pk_b64 = os.getenv("APPLE_MUSIC_PRIVATE_KEY_B64") 
+    
+    if pk_b64:
+        # Decode the Base64 string back into the original PEM format
+        try:
+            # The decode() step restores the correct newlines internally
+            decoded_key = base64.b64decode(pk_b64).decode('utf-8')
+            print("[AppleMusic] Successfully loaded key from Base64 variable.")
+            return decoded_key
+        except Exception as e:
+            print(f"[AppleMusic] ERROR decoding Base64 key: {e}")
+            pass # Fall through to the old method as a backup
+
+    # 2. Fallback to the original (and failing) escaped string method
+    #    You can remove this block if you are confident in the B64 fix.
+    pk_escaped = os.getenv("APPLE_MUSIC_PRIVATE_KEY")
+    if pk_escaped:
+        pk_escaped = pk_escaped.strip().replace('\\n', '\n')
+        if "BEGIN PRIVATE KEY" in pk_escaped:
+            print("[AppleMusic] Falling back to escaped key method.")
+            return pk_escaped
+
+    raise RuntimeError("APPLE_MUSIC_PRIVATE_KEY_B64 or APPLE_MUSIC_PRIVATE_KEY is not set correctly.")
 
 
 def generate_developer_token(exp_mins: int = 30) -> str:
