@@ -298,8 +298,8 @@ def vibe_controls():
         limit = st.slider(
             "Number of tracks",
             min_value=5,
-            max_value=50,
-            value=20,
+            max_value=25,
+            value=10,
             step=1,
             help="How many songs you want in your recommendation batch.",
         )
