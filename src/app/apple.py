@@ -155,7 +155,7 @@ def recommend_tracks_for_vibe(
         print(f"[AppleMusic] No reference features for vibe '{vibe}'")
         return []
 
-    raw_candidates = search_tracks_for_vibe(vibe, storefront=storefront, limit=50)
+    raw_candidates = search_tracks_for_vibe(vibe, storefront=storefront, limit=25)
 
     scored_tracks: List[Dict[str, Any]] = []
     for track in raw_candidates:
