@@ -363,13 +363,17 @@ def tracks_table():
 
     for idx, t in enumerate(tracks, start=1):
         tid = t.get("id")
-        # support both AppleRecommendOutTrack shape and older shape
-        title = t.get("name") or t.get("title") or "Unknown title"
-        artist = (
-            t.get("artist_name")
-            or t.get("artist")
-            or ", ".join(t.get("artists", []))
-            or "Unknown artist"
+        
+        # 1. Get standardized metadata (Matching your updated backend)
+        title = t.get("name", "Unknown Title")
+        artist = t.get("artist_name", "Unknown Artist")
+        album = t.get("album_name", "")  # New field
+        
+        # 2. Get the Artwork URL (New field)
+        image_url = t.get("artwork_url", "")
+        
+        preview = t.get("preview_url")
+        link = t.get("apple_music_url")
         )
         preview = t.get("preview_url")
         link = t.get("apple_music_url") or t.get("apple_url") or t.get("external_url")
