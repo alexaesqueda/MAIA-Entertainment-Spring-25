@@ -10,11 +10,23 @@ import httpx
 
 from .audio_features import extract_features_from_url
 from .student_tracks import get_reference_features_for_vibe
+from .apple_music import generate_developer_token
 
 # Load env variables
 load_dotenv(override=True)
 
 APPLE_DEVELOPER_TOKEN = os.getenv("APPLE_DEVELOPER_TOKEN")
+
+# If not in Env, generate it automatically!
+if not APPLE_DEVELOPER_TOKEN:
+    print("[AppleMusic] Token not in Env. Attempting to generate...")
+    try:
+        # This function handles the private key loading internally
+        APPLE_DEVELOPER_TOKEN = generate_developer_token()
+        print(f"[AppleMusic] ✅ Successfully generated developer token.")
+    except Exception as e:
+        print(f"[AppleMusic] ❌ Generation failed: {e}")
+
 APPLE_MUSIC_BASE_URL = "https://api.music.apple.com"
 
 if not APPLE_DEVELOPER_TOKEN:
