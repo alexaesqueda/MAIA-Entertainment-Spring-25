@@ -63,10 +63,10 @@ BACKEND_BASE_URL = os.getenv(
     "https://maia-entertainment-spring-25.onrender.com"
 ).rstrip("/")
 
-PAGE_TITLE = "‎‎stanzavector.svg"
+PAGE_TITLE = "stanzavector.svg"
 PAGE_ICON = "🎵"
 
-st.set_page_config(page_title="Stanza", page_icon=PAGE_ICON, layout="wide")
+st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
 
 # ------------------ Styling ------------------
 st.markdown(
