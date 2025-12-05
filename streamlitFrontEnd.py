@@ -536,13 +536,13 @@ def login_screen():
     
     with col:
         # Center the image using columns
-        col1, col2, col3 = st.columns([1, 2, 1])
+        col1, col2, col3 = st.columns([1, 2.1, 1])
         with col2:
             st.image("stanzavector.svg", width=400)
         
         st.markdown(
             """
-            <p style='text-align: center; color: #e5e7ff; font-size: 1.1rem; margin-bottom: 30px; margin-top: 10px; margin-left: 50px;'>
+            <p style='text-align: center; color: #e5e7ff; font-size: 1.1rem; margin-bottom: 30px; margin-top: 10px;'>
                 Task-based music recommendations seeded by real student musicians.
             </p>
             """, 
