@@ -1,7 +1,4 @@
-# apple_main.py  (repo root)
-#
-# Thin entrypoint that exposes the Apple-Music-based API.
-# It reuses your existing logic from src/app/apple_music.py and src/app/student_tracks.py
+# src/app/main.py
 
 from typing import List, Optional, Dict, Any
 
@@ -9,49 +6,69 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-# 👇 Import your existing Apple logic (adjust package path if needed)
-from src.app.apple import (
-    recommend_tracks_for_vibe,
-    create_library_playlist,
-)
-from src.app.student_tracks import list_vibes
+# Apple logic lives here:
+from .apple import recommend_tracks_for_vibe, create_library_playlist
+from .student_tracks import list_vibes  # your existing student_vibes/student_tracks helper
 
 
-# ---------- FastAPI app ----------
+# ---------- Create app ----------
 
 app = FastAPI(title="Stanza – Apple Music Backend")
 
-# Allow Streamlit frontend to call this API
+# CORS – allow your Streamlit domain to call this API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # you can tighten later to just your Streamlit domain
+    allow_origins=["*"],  # tighten this later
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# ---------- Pydantic models ----------
+# ---------- Simple root + health ----------
+
+@app.get("/")
+def root():
+    return {"message": "Backend is live!", "service": "stanza-apple-music"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "service": "stanza-apple-music"}
+
+
+# ---------- Vibes catalog ----------
+
+@app.get("/vibes")
+def get_vibes():
+    """
+    Return the set of vibes for which we have student tracks.
+    """
+    vibes = list_vibes()
+    return {"vibes": vibes}
+
+
+# ---------- Pydantic models for Apple endpoints ----------
 
 class AppleRecommendIn(BaseModel):
     """
     Request body for recommending tracks for a vibe.
     """
-    user_token: Optional[str] = None   # Music-User-Token (not required for catalog search)
+    user_token: Optional[str] = None   # optional; not needed for catalog search
     vibe: str
-    storefront: str = "us"            # Apple storefront e.g. "us", "in"
+    storefront: str = "us"
     limit: int = 25
 
 
 class AppleRecommendOutTrack(BaseModel):
     id: str
-    name: Optional[str] = None
-    artist_name: Optional[str] = None
-    album_name: Optional[str] = None
-    preview_url: Optional[str] = None
-    apple_music_url: Optional[str] = None
-    features: Dict[str, Any] = {}
-    similarity: float = 0.0
+    name: Optional[str]
+    artist_name: Optional[str]
+    album_name: Optional[str]
+    preview_url: Optional[str]
+    apple_music_url: Optional[str]
+    features: Dict[str, Any]
+    similarity: float
 
 
 class AppleRecommendOut(BaseModel):
@@ -75,24 +92,6 @@ class ApplePlaylistOut(BaseModel):
     playlist_id: Optional[str]
 
 
-# ---------- Simple health ----------
-
-@app.get("/health")
-def health():
-    return {"status": "ok", "service": "stanza-apple-music"}
-
-
-# ---------- Vibes catalog ----------
-
-@app.get("/vibes")
-def get_vibes():
-    """
-    Return the set of vibes for which we have student tracks.
-    """
-    vibes = list_vibes()
-    return {"vibes": vibes}
-
-
 # ---------- Apple Music recommendations ----------
 
 @app.post("/apple/recommend", response_model=AppleRecommendOut)
@@ -100,6 +99,7 @@ def apple_recommend(body: AppleRecommendIn):
     if body.limit <= 0:
         raise HTTPException(status_code=400, detail="limit must be > 0")
 
+    # This calls your Apple-side logic in apple.py
     tracks = recommend_tracks_for_vibe(
         vibe=body.vibe,
         storefront=body.storefront,
