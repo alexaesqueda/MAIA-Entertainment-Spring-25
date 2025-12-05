@@ -104,7 +104,7 @@ st.markdown(
         font-weight: 600;
         border: 2px solid #667eea;
         background: rgba(102, 126, 234, 0.1);
-        color: #667eea !important;
+        color: #ffffff !important;
         font-size: 1rem;
         transition: all 0.3s ease;
       }
