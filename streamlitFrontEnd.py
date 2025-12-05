@@ -394,13 +394,15 @@ def tracks_table():
             new_val = st.checkbox(
                 "",
                 value=checked,
-                key=f"chk_{tid}",
+                key=f"chk_{tid}_{checked}",  # Dynamic key forces re-render
                 label_visibility="collapsed",
             )
-            if new_val and tid:
+            if new_val and not checked and tid:
                 st.session_state.selected_ids.add(tid)
-            elif not new_val and tid:
+                st.rerun()
+            elif not new_val and checked and tid:
                 st.session_state.selected_ids.discard(tid)
+                st.rerun()
 
         with col2:
             # 1. Prepare Image Tag
