@@ -12,8 +12,7 @@ from .audio_features import extract_features_from_url
 from .student_tracks import get_reference_features_for_vibe
 from .apple_music import generate_developer_token
 
-# Load env variables
-load_dotenv(override=True)
+# Load env variables no
 
 APPLE_DEVELOPER_TOKEN = os.getenv("APPLE_DEVELOPER_TOKEN")
 
