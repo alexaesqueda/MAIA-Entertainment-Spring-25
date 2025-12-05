@@ -62,7 +62,7 @@ BACKEND_BASE_URL = os.getenv(
     "https://maia-entertainment-spring-25.onrender.com"
 ).rstrip("/")
 
-PAGE_TITLE = "stanzavector.svg"
+PAGE_TITLE = "‎‎ ‎ ‎ ‎ Stanza"
 PAGE_ICON = "🎵"
 
 st.set_page_config(page_title="Stanza", page_icon=PAGE_ICON, layout="wide")
@@ -157,7 +157,7 @@ st.markdown(
       .stTextArea>label,
       .stSelectbox>label,
       .stSlider>label {
-        color: #ffe118 !important;
+        color: #dae2ed !important;
         font-weight: 600 !important;
         font-size: 0.95rem !important;
       }
@@ -233,16 +233,16 @@ def fetch_vibes():
 # ------------------ UI Blocks ------------------
 
 def header():
-    left_pad, left, right = st.columns([0.1, 1.6, 0.3])
+    left_pad, left, right = st.columns([0.1, 0.6, 0.3])
 
     with left:
-        st.markdown("<div style='margin-top:-150px;'></div>", unsafe_allow_html=True)
-        st.image(PAGE_TITLE, width=200)
-        st.markdown("<div style='margin-top:-150px;'></div>", unsafe_allow_html=True)
         st.markdown(
-            """
-            <p style='font-size:1.2rem; color:#e5e7ff; text-align:center; margin-top:-100px; margin-left:150px;'>
-               ✨ Task-based Apple Music recommendations, seeded by real student musicians.
+            f"""
+            <h1 style='text-align:center; font-size:3rem; font-weight:800; margin-bottom:0.5rem; color:white;'>
+                {PAGE_TITLE}
+            </h1>
+            <p style='font-size:1.2rem; color:#e5e7ff; text-align:center; margin-top:-10px;'>
+                ✨ Task-based Apple Music recommendations, seeded by real student musicians.
             </p>
             """,
             unsafe_allow_html=True,
@@ -274,7 +274,7 @@ def header():
         st.session_state.apple_user_token = token
 
     st.markdown(
-        "<div style='height:2px; background:linear-gradient(90deg, transparent, #667eea, transparent); margin:-2rem 0;'></div>",
+        "<div style='height:2px; background:linear-gradient(90deg, transparent, #667eea, transparent); margin:2rem 0;'></div>",
         unsafe_allow_html=True,
     )
 
@@ -298,8 +298,8 @@ def vibe_controls():
         limit = st.slider(
             "Number of tracks",
             min_value=5,
-            max_value=50,
-            value=20,
+            max_value=25,
+            value=10,
             step=1,
             help="How many songs you want in your recommendation batch.",
         )
@@ -343,14 +343,7 @@ def recommend_action(vibe: str, limit: int):
 def tracks_table():
     tracks = st.session_state.rec_tracks or []
     if not tracks:
-        st.markdown(
-            """
-            <p style='color:#fae298 !important; font-size:1.1rem;'>
-                🎵 No tracks yet. Click <b>RECOMMEND TRACKS</b> above.
-            </p>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.info("🎵 No tracks yet. Click **RECOMMEND TRACKS** above.")
         return
 
     st.subheader("3) Review & pick tracks")
@@ -370,13 +363,17 @@ def tracks_table():
 
     for idx, t in enumerate(tracks, start=1):
         tid = t.get("id")
-        # support both AppleRecommendOutTrack shape and older shape
-        title = t.get("name") or t.get("title") or "Unknown title"
-        artist = (
-            t.get("artist_name")
-            or t.get("artist")
-            or ", ".join(t.get("artists", []))
-            or "Unknown artist"
+        
+        # 1. Get standardized metadata (Matching your updated backend)
+        title = t.get("name", "Unknown Title")
+        artist = t.get("artist_name", "Unknown Artist")
+        album = t.get("album_name", "")  # New field
+        
+        # 2. Get the Artwork URL (New field)
+        image_url = t.get("artwork_url", "")
+        
+        preview = t.get("preview_url")
+        link = t.get("apple_music_url")
         )
         preview = t.get("preview_url")
         link = t.get("apple_music_url") or t.get("apple_url") or t.get("external_url")
@@ -403,19 +400,33 @@ def tracks_table():
                 st.session_state.selected_ids.discard(tid)
 
         with col2:
-            st.markdown(
-                f"<div class='card'><b>#{idx} {title}</b> — {artist}</div>",
-                unsafe_allow_html=True,
-            )
+            # 1. NEW: Render the rich HTML card (Image + Title + Artist + Album)
+            # Ensure 'image_url' variable exists (default to None or empty string if missing)
+            image_tag = f'<img src="{image_url}" width="60" style="border-radius: 8px;">' if image_url else ''
+            
+            card_html = f"""
+            <div class='card' style='display: flex; align-items: center; gap: 15px; margin-bottom: 10px;'>
+                {image_tag}
+                <div style='flex-grow: 1;'> <div style='font-size: 1.1rem; font-weight: 700; color: #333;'>{title}</div>
+                    <div style='font-size: 0.95rem; color: #666;'>{artist}</div>
+                    <div style='font-size: 0.8rem; color: #999;'>{album}</div>
+                </div>
+            </div>
+            """
+            st.markdown(card_html, unsafe_allow_html=True)
+        
+            # 2. EXISTING: Metrics (Caption)
             if metrics:
-                st.caption("  •  ".join(metrics))
-
+                st.caption(" • ".join(metrics))
+        
+            # 3. EXISTING: Audio Player
             if preview:
                 st.audio(preview, format="audio/mp3")
-
+        
+            # 4. EXISTING: Apple Music Link
             if link:
                 st.markdown(
-                    f"<a href='{link}' target='_blank'>🎵 Open in Apple Music</a>",
+                    f"<a href='{link}' target='_blank' style='text-decoration: none; color: #FA2D48; font-weight: bold;'>🎵 Open in Apple Music</a>",
                     unsafe_allow_html=True,
                 )
 
