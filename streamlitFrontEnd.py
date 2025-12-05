@@ -241,7 +241,7 @@ def header():
         st.markdown("<div style='margin-top:-150px;'></div>", unsafe_allow_html=True)
         st.markdown(
             """
-            <p style='font-size:1.2rem; color:#e5e7ff; text-align:center; margin-top:-10px; margin-left:100px'>
+            <p style='font-size:1.2rem; color:#e5e7ff; text-align:center; margin-top:-10px; margin-left:200px'>
                ✨ Task-based Apple Music recommendations, seeded by real student musicians.
             </p>
             """,
