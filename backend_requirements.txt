@@ -13,3 +13,4 @@ numpy<2.0
 numba==0.56.4
 soundfile
 audioread
+PyJWT[crypto]==2.9.0
