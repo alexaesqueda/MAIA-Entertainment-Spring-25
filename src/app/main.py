@@ -198,6 +198,7 @@ class ApplePlaylistIn(BaseModel):
 class ApplePlaylistOut(BaseModel):
     ok: bool
     playlist_id: Optional[str]
+    playlist_url: Optional[str] = None
 
 
 # ---------- Apple Music recommendations ----------
