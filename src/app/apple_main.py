@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # 👇 Import your existing Apple logic (adjust package path if needed)
-from .apple import (
+from src.app.apple import (
     recommend_tracks_for_vibe,
     create_library_playlist,
 )
