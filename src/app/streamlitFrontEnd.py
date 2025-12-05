@@ -55,6 +55,55 @@ import textwrap
 import requests
 import streamlit as st
 from dotenv import load_dotenv
+import streamlit.components.v1 as components
+
+def apple_login_component(developer_token):
+    html_code = f"""
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <script src="https://js-cdn.music.apple.com/musickit/v1/musickit.js"></script>
+        <style>
+          body {{ font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: transparent; }}
+          #login-btn {{
+            background-color: #FA2D48; color: white; border: none; 
+            padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;
+          }}
+          #status {{ margin-top: 10px; font-size: 14px; color: #eee; }}
+          textarea {{ width: 100%; height: 60px; margin-top: 5px; display: none; }}
+        </style>
+      </head>
+      <body>
+        <button id="login-btn">Login with Apple Music</button>
+        <p id="status"></p>
+        <textarea id="token-box" readonly></textarea>
+
+        <script>
+          document.addEventListener('musickitloaded', function() {{
+            MusicKit.configure({{
+              developerToken: '{developer_token}',
+              app: {{ name: 'Stanza', build: '1.0.0' }}
+            }});
+          }});
+
+          document.getElementById('login-btn').addEventListener('click', async function() {{
+            const music = MusicKit.getInstance();
+            try {{
+              const token = await music.authorize();
+              document.getElementById('status').innerText = "✅ Success! Copy token below:";
+              const box = document.getElementById('token-box');
+              box.style.display = 'block';
+              box.value = token;
+            }} catch (err) {{
+              document.getElementById('status').innerText = "❌ Error: " + err;
+            }}
+          }});
+        </script>
+      </body>
+    </html>
+    """
+    components.html(html_code, height=200)
 
 # ------------------ Config ------------------
 load_dotenv(override=True)
@@ -63,10 +112,10 @@ BACKEND_BASE_URL = os.getenv(
     "https://maia-entertainment-spring-25.onrender.com"
 ).rstrip("/")
 
-PAGE_TITLE = "‎‎ ‎ ‎ ‎ Stanza"
+PAGE_TITLE = "stanzavector.svg"
 PAGE_ICON = "🎵"
 
-st.set_page_config(page_title="Stanza", page_icon=PAGE_ICON, layout="wide")
+st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
 
 # ------------------ Styling ------------------
 st.markdown(
@@ -103,8 +152,8 @@ st.markdown(
         padding: 0.6rem 1.5rem;
         font-weight: 600;
         border: 2px solid #667eea;
-        background: white;
-        color: #667eea !important;
+        background: rgba(102, 126, 234, 0.1);
+        color: #ffffff !important;
         font-size: 1rem;
         transition: all 0.3s ease;
       }
@@ -234,14 +283,15 @@ def fetch_vibes():
 # ------------------ UI Blocks ------------------
 
 def header():
+    # 1. Define the columns (Keep this at the top of the function)
     left_pad, left, right = st.columns([0.1, 0.6, 0.3])
 
+    # 2. The Left Side (Title/Logo) - KEEP THIS AS IS
     with left:
+        # (This is where your Logo or Title code is)
+        st.image("stanzalogo.png", width=200) 
         st.markdown(
             f"""
-            <h1 style='text-align:center; font-size:3rem; font-weight:800; margin-bottom:0.5rem; color:white;'>
-                {PAGE_TITLE}
-            </h1>
             <p style='font-size:1.2rem; color:#e5e7ff; text-align:center; margin-top:-10px;'>
                 ✨ Task-based Apple Music recommendations, seeded by real student musicians.
             </p>
@@ -249,36 +299,34 @@ def header():
             unsafe_allow_html=True,
         )
 
+    # 3. The Right Side (Login Button) - UPDATE THIS PART
     with right:
-        # Apple Music user token input (for playlist creation)
-        st.markdown(
-            """
-            <div style='padding:8px 12px; margin-bottom:6px;
-                background:rgba(15, 23, 42, 0.65);
-                border-radius:12px; color:#e5e7ff;
-                border:1px solid rgba(148, 163, 184, 0.4);'>
-                <div style='font-size:0.85rem; font-weight:600;'>Apple Music User Token</div>
-                <div style='font-size:0.75rem; opacity:0.85;'>
-                    Required only to save playlists to your Apple Music library.<br>
-                    You can still get recommendations without it.
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.markdown("### Apple Music Login")
+        
+        # A. Get Developer Token from Backend
+        try:
+            resp = api_get("/apple/token")
+            dev_token = resp.get("token")
+        except:
+            dev_token = None
+        
+        # B. Show Login Button (if token exists)
+        if dev_token:
+            apple_login_component(dev_token)
+            
+        # C. Input box (so they can paste the token if needed)
         token = st.text_input(
-            "Paste your Apple Music user token",
+            "Paste User Token Here", 
             value=st.session_state.apple_user_token,
-            type="password",
-            label_visibility="collapsed",
+            type="password"
         )
         st.session_state.apple_user_token = token
 
+    # 4. Divider Line (Keep this at the end)
     st.markdown(
         "<div style='height:2px; background:linear-gradient(90deg, transparent, #667eea, transparent); margin:2rem 0;'></div>",
         unsafe_allow_html=True,
     )
-
 
 def vibe_controls():
     st.subheader("1) Choose your vibe (task)")
@@ -354,13 +402,17 @@ def tracks_table():
 
     c1, c2, _ = st.columns([0.2, 0.2, 0.6])
     with c1:
-        if st.button("✅ SELECT ALL"):
-            st.session_state.selected_ids = set(t.get("id") for t in tracks if t.get("id"))
-            st.rerun()
+        select_all = st.button("✅ SELECT ALL", key="btn_select_all")
     with c2:
-        if st.button("❌ CLEAR ALL"):
-            st.session_state.selected_ids = set()
-            st.rerun()
+        clear_all = st.button("❌ CLEAR ALL", key="btn_clear_all")
+    
+    if select_all:
+        st.session_state.selected_ids = set(t.get("id") for t in tracks if t.get("id"))
+        st.rerun()
+    
+    if clear_all:
+        st.session_state.selected_ids = set()
+        st.rerun()
 
     for idx, t in enumerate(tracks, start=1):
         tid = t.get("id")
@@ -392,20 +444,22 @@ def tracks_table():
             new_val = st.checkbox(
                 "",
                 value=checked,
-                key=f"chk_{tid}",
+                key=f"chk_{tid}_{checked}",  # Dynamic key forces re-render
                 label_visibility="collapsed",
             )
-            if new_val and tid:
+            if new_val and not checked and tid:
                 st.session_state.selected_ids.add(tid)
-            elif not new_val and tid:
+                st.rerun()
+            elif not new_val and checked and tid:
                 st.session_state.selected_ids.discard(tid)
+                st.rerun()
 
         with col2:
             # 1. Prepare Image Tag
             image_tag = f'<img src="{image_url}" width="60" style="border-radius: 8px;">' if image_url else ''
             
             # 2. HTML Card (ALL ON ONE LINE to prevent "Black Box" code blocks)
-            card_html = f"<div class='card' style='display: flex; align-items: center; gap: 15px; margin-bottom: 10px; padding: 10px; border-radius: 10px; background-color: #ffffff; color: #333;'>{image_tag}<div style='flex-grow: 1;'><div style='font-size: 1.1rem; font-weight: 700; color: #333;'>{title}</div><div style='font-size: 0.95rem; color: #666;'>{artist}</div><div style='font-size: 0.8rem; color: #999;'>{album}</div></div></div>"
+            card_html = f"<div class='card' style='display: flex; align-items: center; gap: 15px; margin-bottom: 10px; padding: 10px; border-radius: 10px; background-color: rgba(102, 126, 234, 0.3); border: 1px solid rgba(102, 126, 234, 0.3); color: #e5e7ff;'>{image_tag}<div style='flex-grow: 1;'><div style='font-size: 1.1rem; font-weight: 700; color: #ffffff;'>{title}</div><div style='font-size: 0.95rem; color: #e5e7ff;'>{artist}</div><div style='font-size: 0.8rem; color: #c7d0e3;'>{album}</div></div></div>"
             
             # 3. Render
             st.markdown(card_html, unsafe_allow_html=True)
