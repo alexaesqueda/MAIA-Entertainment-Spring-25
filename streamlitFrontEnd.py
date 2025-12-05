@@ -464,7 +464,13 @@ def create_playlist_block(vibe: str):
     with colB:
         st.caption("If off, only tracks you left checked above will be used.")
 
-    create = st.button("🪄 CREATE APPLE MUSIC PLAYLIST", type="primary", use_container_width=True)
+    # --- 👇 NEW LOGIC STARTS HERE 👇 ---
+    
+    # 1. Create a placeholder slot for the action button
+    action_button_slot = st.empty()
+    
+    # 2. Render the 'Create' button inside that slot
+    create = action_button_slot.button("🪄 CREATE APPLE MUSIC PLAYLIST", type="primary", use_container_width=True)
 
     if not create:
         return
@@ -488,39 +494,34 @@ def create_playlist_block(vibe: str):
         try:
             payload = {
                 "user_token": user_token,
-                "storefront": "us",  # adjust if needed
+                "storefront": "us",
                 "vibe": vibe,
                 "name": name,
                 "description": description,
                 "track_ids": track_ids,
             }
             
-            # --- START OF NEW LOGIC ---
-            
-            # 1. Call the API
+            # Call Backend
             res = api_post("/apple/playlist", payload)
             
-            # 2. Extract Data (ID and URL)
             playlist_id = res.get("playlist_id")
             playlist_url = res.get("playlist_url")
 
-            # 3. Success Message
+            # Success Feedback
             st.success("✅ Playlist created in your Apple Music library!")
             
-            # 4. Show the "Shazam-style" Open Button
+            # --- 3. SWAP THE BUTTON ---
             if playlist_url:
-                st.link_button(
+                # We overwrite the original 'create' button slot with the 'Open' link button
+                action_button_slot.link_button(
                     label="🎵 OPEN IN APPLE MUSIC", 
                     url=playlist_url, 
                     type="primary", 
                     use_container_width=True
                 )
             
-            # 5. Show ID for reference
             if playlist_id:
                 st.caption(f"Playlist ID: {playlist_id}")
-                
-            # --- END OF NEW LOGIC ---
 
         except Exception as e:
             st.error(f"❌ Playlist creation failed: {e}")
