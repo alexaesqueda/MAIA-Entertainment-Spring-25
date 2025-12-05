@@ -51,6 +51,7 @@ Backend expectations (Apple version):
 
 import os
 import time
+import textwrap
 import requests
 import streamlit as st
 from dotenv import load_dotenv
@@ -400,22 +401,22 @@ def tracks_table():
                 st.session_state.selected_ids.discard(tid)
 
         with col2:
-            # 1. Prepare Image Tag (ternary operator)
+            # 1. Prepare Image Tag
             image_tag = f'<img src="{image_url}" width="60" style="border-radius: 8px;">' if image_url else ''
             
-            # 2. HTML Card 
-            # ⚠️ CRITICAL: The HTML string below must be flushed to the FAR LEFT.
-            # Do not indent the lines starting with <div...
-            card_html = f"""
-<div class='card' style='display: flex; align-items: center; gap: 15px; margin-bottom: 10px; padding: 10px; border-radius: 10px; background-color: #ffffff; color: #333;'>
-    {image_tag}
-    <div style='flex-grow: 1;'>
-        <div style='font-size: 1.1rem; font-weight: 700; color: #333;'>{title}</div>
-        <div style='font-size: 0.95rem; color: #666;'>{artist}</div>
-        <div style='font-size: 0.8rem; color: #999;'>{album}</div>
-    </div>
-</div>
-"""
+            # 2. Use textwrap.dedent to strip the indentation automatically
+            card_html = textwrap.dedent(f"""
+                <div class='card' style='display: flex; align-items: center; gap: 15px; margin-bottom: 10px; padding: 10px; border-radius: 10px; background-color: #ffffff; color: #333;'>
+                    {image_tag}
+                    <div style='flex-grow: 1;'>
+                        <div style='font-size: 1.1rem; font-weight: 700; color: #333;'>{title}</div>
+                        <div style='font-size: 0.95rem; color: #666;'>{artist}</div>
+                        <div style='font-size: 0.8rem; color: #999;'>{album}</div>
+                    </div>
+                </div>
+            """)
+            
+            # Render the HTML
             st.markdown(card_html, unsafe_allow_html=True)
 
             # 3. EXISTING: Metrics
