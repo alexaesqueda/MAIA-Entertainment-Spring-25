@@ -462,15 +462,14 @@ def create_playlist_block(vibe: str):
     with colA:
         use_all = st.toggle("Use all recommended tracks", value=True)
     with colB:
-        st.caption(
-            "If off, only tracks you left checked above will be used."
-        )
+        st.caption("If off, only tracks you left checked above will be used.")
 
     create = st.button("🪄 CREATE APPLE MUSIC PLAYLIST", type="primary", use_container_width=True)
 
     if not create:
         return
 
+    # Determine which tracks to use
     if use_all:
         track_ids = [t.get("id") for t in tracks if t.get("id")]
     else:
@@ -482,7 +481,7 @@ def create_playlist_block(vibe: str):
 
     user_token = st.session_state.apple_user_token.strip()
     if not user_token:
-        st.error("❌ Apple Music user token is required to create a playlist in your library.")
+        st.error("❌ Apple Music user token is required. Please login above.")
         return
 
     with st.spinner("🎧 Creating your Apple Music playlist..."):
@@ -495,13 +494,34 @@ def create_playlist_block(vibe: str):
                 "description": description,
                 "track_ids": track_ids,
             }
-            # 🔴 IMPORTANT: use Apple playlist endpoint
+            
+            # --- START OF NEW LOGIC ---
+            
+            # 1. Call the API
             res = api_post("/apple/playlist", payload)
+            
+            # 2. Extract Data (ID and URL)
             playlist_id = res.get("playlist_id")
+            playlist_url = res.get("playlist_url")
+
+            # 3. Success Message
             st.success("✅ Playlist created in your Apple Music library!")
+            
+            # 4. Show the "Shazam-style" Open Button
+            if playlist_url:
+                st.link_button(
+                    label="🎵 OPEN IN APPLE MUSIC", 
+                    url=playlist_url, 
+                    type="primary", 
+                    use_container_width=True
+                )
+            
+            # 5. Show ID for reference
             if playlist_id:
-                # You can construct a URL if your backend doesn't return one
                 st.caption(f"Playlist ID: {playlist_id}")
+                
+            # --- END OF NEW LOGIC ---
+
         except Exception as e:
             st.error(f"❌ Playlist creation failed: {e}")
 
