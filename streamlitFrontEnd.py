@@ -63,7 +63,7 @@ BACKEND_BASE_URL = os.getenv(
     "https://maia-entertainment-spring-25.onrender.com"
 ).rstrip("/")
 
-PAGE_TITLE = "‎‎ ‎ ‎ ‎ Stanza"
+PAGE_TITLE = "‎‎stanzavector.svg"
 PAGE_ICON = "🎵"
 
 st.set_page_config(page_title="Stanza", page_icon=PAGE_ICON, layout="wide")
@@ -237,12 +237,10 @@ def header():
     left_pad, left, right = st.columns([0.1, 0.6, 0.3])
 
     with left:
+        st.image(PAGE_TITLE, width=200)
         st.markdown(
-            f"""
-            <h1 style='text-align:center; font-size:3rem; font-weight:800; margin-bottom:0.5rem; color:white;'>
-                {PAGE_TITLE}
-            </h1>
-            <p style='font-size:1.2rem; color:#e5e7ff; text-align:center; margin-top:-10px;'>
+            """
+            <p style='font-size:1.2rem; color:#e5e7ff; text-align:center; margin-top:-10px; margin-left:55px'>
                 ✨ Task-based Apple Music recommendations, seeded by real student musicians.
             </p>
             """,
