@@ -236,9 +236,9 @@ def header():
     left_pad, left, right = st.columns([0.1, 0.6, 0.3])
 
     with left:
-        st.markdown("<div style='margin-top:-80px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top:-150px;'></div>", unsafe_allow_html=True)
         st.image(PAGE_TITLE, width=200)
-        st.markdown("<div style='margin-top:-40px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top:-150px;'></div>", unsafe_allow_html=True)
         st.markdown(
             """
             <p style='font-size:1.2rem; color:#e5e7ff; text-align:left; margin-top:-10px;'>
