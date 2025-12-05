@@ -534,18 +534,18 @@ def login_screen():
     """
     _, col, _ = st.columns([0.2, 0.6, 0.2])
     
-   with col:
-            st.markdown(
-                """
-                <div style='text-align: center;'>
-                    <img src='stanzavector.svg' style='width: 300px; margin: 0 auto; display: block;'>
-                </div>
-                <p style='text-align: center; color: #e5e7ff; font-size: 1.1rem; margin-bottom: 30px; margin-top: 10px;'>
-                    Task-based music recommendations seeded by real student musicians.
-                </p>
-                """, 
-                unsafe_allow_html=True
-            )
+    with col:
+        st.markdown(
+            """
+            <div style='text-align: center;'>
+                <img src='stanzavector.svg' style='width: 300px; margin: 0 auto; display: block;'>
+            </div>
+            <p style='text-align: center; color: #e5e7ff; font-size: 1.1rem; margin-bottom: 30px; margin-top: 10px;'>
+                Task-based music recommendations seeded by real student musicians.
+            </p>
+            """, 
+            unsafe_allow_html=True
+        )
         
         # 👇 THE NEW LOGIN BUTTON (It's just a link now!)
         # Replace this URL with your actual Render Backend URL
