@@ -542,7 +542,7 @@ def login_screen():
         
         st.markdown(
             """
-            <p style='text-align: center; color: #e5e7ff; font-size: 1.1rem; margin-bottom: 30px; margin-top: 10px; margin-left: 20px;'>
+            <p style='text-align: center; color: #e5e7ff; font-size: 1.1rem; margin-bottom: 30px; margin-top: 10px; margin-left: 50px;'>
                 Task-based music recommendations seeded by real student musicians.
             </p>
             """, 
