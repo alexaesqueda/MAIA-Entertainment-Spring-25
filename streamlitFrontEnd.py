@@ -574,7 +574,7 @@ def main_app():
     # 1. Mini Header (Logo + Logout)
     c1, c2 = st.columns([0.8, 0.2])
     with c1:
-        st.image("stanzalogo.png", width=150)
+        st.image("stanzavector.svg", width=150)
     with c2:
         if st.button("🚪 Logout", type="secondary", use_container_width=True):
             st.session_state.apple_user_token = ""
