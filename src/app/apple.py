@@ -172,6 +172,10 @@ def recommend_tracks_for_vibe(
 
         score = cosine_similarity(ref_features, feature_vector)
         attrs = track.get("attributes", {})
+        # Safe Artwork Extraction
+        artwork = attrs.get("artwork", {})
+        # Replace placeholders with 100x100 dimensions
+        artwork_url = artwork.get("url", "").replace("{w}", "100").replace("{h}", "100")
 
         scored_tracks.append(
             {
@@ -179,6 +183,7 @@ def recommend_tracks_for_vibe(
                 "name": attrs.get("name"),
                 "artist_name": attrs.get("artistName"),
                 "album_name": attrs.get("albumName"),
+                "artwork_url": artwork_url,
                 "preview_url": feats.get("preview_url"),
                 "apple_music_url": attrs.get("url"),
                 "features": feature_vector,
