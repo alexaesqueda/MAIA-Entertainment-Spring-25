@@ -240,7 +240,7 @@ def header():
         st.image(PAGE_TITLE, width=200)
         st.markdown(
             """
-            <p style='font-size:1.2rem; color:#e5e7ff; text-align:center; margin-top:-10px;margin-left:150px;'>
+            <p style='font-size:1.2rem; color:#e5e7ff; text-align:center; margin-top:-10px;margin-left:250px;'>
                 ✨ Task-based Apple Music recommendations, seeded by real student musicians.
             </p>
             """,
