@@ -12,7 +12,6 @@ from .apple_music import (
 )
 from .student_tracks import list_vibes
 
-
 app = FastAPI(title="Stanza – Apple Music Backend")
 
 # CORS – allow your Streamlit domain to call this API
@@ -24,16 +23,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # ---------- Pydantic models ----------
 
 class AppleRecommendIn(BaseModel):
-    """
-    Request body for recommending tracks for a vibe.
-    """
-    user_token: Optional[str] = None   # Music-User-Token, not required for catalog search
+    user_token: Optional[str] = None   # Music-User-Token, not strictly required for catalog search
     vibe: str
-    storefront: str = "us"             # Apple storefront, e.g. "us", "in"
+    storefront: str = "us"
     limit: int = 25
 
 
@@ -56,7 +51,7 @@ class AppleRecommendOut(BaseModel):
 
 
 class ApplePlaylistIn(BaseModel):
-    user_token: str             # Music-User-Token (required to write to user library)
+    user_token: str
     storefront: str = "us"
     vibe: str
     name: str
@@ -80,9 +75,6 @@ def health():
 
 @app.get("/vibes")
 def get_vibes():
-    """
-    Return the set of vibes for which we have student tracks.
-    """
     vibes = list_vibes()
     return {"vibes": vibes}
 
@@ -91,9 +83,6 @@ def get_vibes():
 
 @app.post("/apple/recommend", response_model=AppleRecommendOut)
 def apple_recommend(body: AppleRecommendIn):
-    """
-    Primary Apple Music recommendation endpoint.
-    """
     if body.limit <= 0:
         raise HTTPException(status_code=400, detail="limit must be > 0")
 
@@ -107,24 +96,13 @@ def apple_recommend(body: AppleRecommendIn):
     return AppleRecommendOut(ok=True, vibe=body.vibe, count=len(out_tracks), tracks=out_tracks)
 
 
-# (Optional) backwards-compatible alias: /recommend -> same behaviour
-@app.post("/recommend", response_model=AppleRecommendOut)
-def recommend_alias(body: AppleRecommendIn):
-    """
-    Legacy alias so older frontends using /recommend still work.
-    """
-    return apple_recommend(body)
-
-
 # ---------- Apple Music playlist creation ----------
 
 @app.post("/apple/playlist", response_model=ApplePlaylistOut)
 def apple_playlist(body: ApplePlaylistIn):
-    """
-    Create a playlist in the user's Apple Music library.
-    """
     if not body.user_token:
         raise HTTPException(status_code=400, detail="Apple Music user_token is required to create a playlist.")
+
     if not body.track_ids:
         raise HTTPException(status_code=400, detail="No track_ids provided.")
 
