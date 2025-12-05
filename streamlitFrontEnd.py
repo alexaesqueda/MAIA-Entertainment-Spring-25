@@ -242,7 +242,7 @@ def header():
             <h1 style='text-align:center; font-size:3rem; font-weight:800; margin-bottom:0.5rem; color:white;'>
                 {PAGE_TITLE}
             </h1>
-            <p style='font-size:1.2rem; color:#e5e7ff; text-align:center; margin-top:-10px;'>
+            <p style='font-size:0.1rem; color:#e5e7ff; text-align:center; margin-top:-10px;'>
                 ✨ Task-based Apple Music recommendations, seeded by real student musicians.
             </p>
             """,
