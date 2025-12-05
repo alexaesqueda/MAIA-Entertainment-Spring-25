@@ -14,19 +14,17 @@ from .student_tracks import list_vibes
 
 app = FastAPI(title="Stanza – Apple Music Backend")
 
-# CORS – allow your Streamlit domain to call this API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten later
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ---------- Pydantic models ----------
 
 class AppleRecommendIn(BaseModel):
-    user_token: Optional[str] = None   # Music-User-Token, not strictly required for catalog search
+    user_token: Optional[str] = None
     vibe: str
     storefront: str = "us"
     limit: int = 25
@@ -64,22 +62,16 @@ class ApplePlaylistOut(BaseModel):
     playlist_id: Optional[str]
 
 
-# ---------- Simple health ----------
-
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "stanza-apple-music"}
 
-
-# ---------- Vibes catalog ----------
 
 @app.get("/vibes")
 def get_vibes():
     vibes = list_vibes()
     return {"vibes": vibes}
 
-
-# ---------- Apple Music recommendations ----------
 
 @app.post("/apple/recommend", response_model=AppleRecommendOut)
 def apple_recommend(body: AppleRecommendIn):
@@ -91,12 +83,9 @@ def apple_recommend(body: AppleRecommendIn):
         storefront=body.storefront,
         limit=body.limit,
     )
-
     out_tracks = [AppleRecommendOutTrack(**t) for t in tracks]
     return AppleRecommendOut(ok=True, vibe=body.vibe, count=len(out_tracks), tracks=out_tracks)
 
-
-# ---------- Apple Music playlist creation ----------
 
 @app.post("/apple/playlist", response_model=ApplePlaylistOut)
 def apple_playlist(body: ApplePlaylistIn):
@@ -119,6 +108,8 @@ def apple_playlist(body: ApplePlaylistIn):
 
     return ApplePlaylistOut(ok=True, playlist_id=playlist_id)
 
+
+# 🔍 Debug endpoint so we can confirm this app is actually running
 @app.get("/__whoami")
 def whoami():
     return {
