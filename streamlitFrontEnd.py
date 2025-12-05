@@ -535,7 +535,7 @@ def login_screen():
     _, col, _ = st.columns([0.2, 0.6, 0.2])
     
     with col:
-        st.image("stanzalogo.png", width=300)
+        st.image("stanzavector.svg", width=300)
         st.markdown(
             """
             <h1 style='text-align: center; color: white;'>Stanza</h1>
