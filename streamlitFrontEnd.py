@@ -55,6 +55,55 @@ import textwrap
 import requests
 import streamlit as st
 from dotenv import load_dotenv
+import streamlit.components.v1 as components
+
+def apple_login_component(developer_token):
+    html_code = f"""
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <script src="https://js-cdn.music.apple.com/musickit/v1/musickit.js"></script>
+        <style>
+          body {{ font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: transparent; }}
+          #login-btn {{
+            background-color: #FA2D48; color: white; border: none; 
+            padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;
+          }}
+          #status {{ margin-top: 10px; font-size: 14px; color: #eee; }}
+          textarea {{ width: 100%; height: 60px; margin-top: 5px; display: none; }}
+        </style>
+      </head>
+      <body>
+        <button id="login-btn">Login with Apple Music</button>
+        <p id="status"></p>
+        <textarea id="token-box" readonly></textarea>
+
+        <script>
+          document.addEventListener('musickitloaded', function() {{
+            MusicKit.configure({{
+              developerToken: '{developer_token}',
+              app: {{ name: 'Stanza', build: '1.0.0' }}
+            }});
+          }});
+
+          document.getElementById('login-btn').addEventListener('click', async function() {{
+            const music = MusicKit.getInstance();
+            try {{
+              const token = await music.authorize();
+              document.getElementById('status').innerText = "✅ Success! Copy token below:";
+              const box = document.getElementById('token-box');
+              box.style.display = 'block';
+              box.value = token;
+            }} catch (err) {{
+              document.getElementById('status').innerText = "❌ Error: " + err;
+            }}
+          }});
+        </script>
+      </body>
+    </html>
+    """
+    components.html(html_code, height=200)
 
 # ------------------ Config ------------------
 load_dotenv(override=True)
