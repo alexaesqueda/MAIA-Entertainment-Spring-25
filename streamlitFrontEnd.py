@@ -354,11 +354,11 @@ def tracks_table():
     with c1:
         if st.button("✅ SELECT ALL"):
             st.session_state.selected_ids = set(t.get("id") for t in tracks if t.get("id"))
-            st.rerun()
+            st.experimental_rerun()
     with c2:
         if st.button("❌ CLEAR ALL"):
             st.session_state.selected_ids = set()
-            st.rerun()
+            st.experimental_rerun()
 
     for idx, t in enumerate(tracks, start=1):
         tid = t.get("id")
