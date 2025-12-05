@@ -16,6 +16,9 @@ APPLE_MUSIC_API = "https://api.music.apple.com/v1"
 # --- Change in apple_music.py ---
 
 def _load_private_key() -> str:
+    # DEBUG: Print all available keys (but NOT values, for security)
+    print(f"[DEBUG] Available Env Vars: {list(os.environ.keys())}")
+    
     # 1. Try to load the Base64 encoded key first
     pk_b64 = os.getenv("APPLE_MUSIC_PRIVATE_KEY_B64") 
     
@@ -50,7 +53,7 @@ def generate_developer_token(exp_mins: int = 30) -> str:
     now = int(time.time())
     payload = {
         "iss": APPLE_MUSIC_TEAM_ID,
-        "iat": now,
+        "iat": now-60,
         "exp": now + exp_mins * 60,
     }
     headers = {
