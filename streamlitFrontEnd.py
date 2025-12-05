@@ -157,7 +157,7 @@ st.markdown(
       .stTextArea>label,
       .stSelectbox>label,
       .stSlider>label {
-        color: #fee214 !important;
+        color: #ffe118 !important;
         font-weight: 600 !important;
         font-size: 0.95rem !important;
       }
