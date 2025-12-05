@@ -10,7 +10,7 @@ from .apple_music import (
     recommend_tracks_for_vibe,
     create_library_playlist,
 )
-from .student_tracks import list_vibes  # your existing student_vibes/student_tracks file
+from .student_tracks import list_vibes
 
 
 app = FastAPI(title="Stanza – Apple Music Backend")
@@ -111,7 +111,7 @@ def apple_recommend(body: AppleRecommendIn):
 @app.post("/recommend", response_model=AppleRecommendOut)
 def recommend_alias(body: AppleRecommendIn):
     """
-    Legacy alias for Apple recommendations, so old frontends using /recommend still work.
+    Legacy alias so older frontends using /recommend still work.
     """
     return apple_recommend(body)
 
