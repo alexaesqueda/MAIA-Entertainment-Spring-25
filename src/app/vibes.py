@@ -1,5 +1,4 @@
 from typing import Dict, Any
-import os
 
 # Target feature ranges/centers tuned for accuracy.
 # We’ll send these as target_* to Spotify’s recommendations
